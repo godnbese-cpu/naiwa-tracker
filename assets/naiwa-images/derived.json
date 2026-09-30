@@ -1,0 +1,133 @@
+{
+  "generatedAt": "2026-09-30T09:37:32+00:00",
+  "count": 2,
+  "totalBytes": 703234,
+  "tiles": [
+    {
+      "file": "960px-Anura_Diversity-325c0157.jpg",
+      "w": 960,
+      "h": 1451,
+      "source": "Wikimedia Commons · Ranidae 蛙科分类",
+      "license": "free",
+      "url": "(本地文件) 960px-Anura_Diversity-325c0157.jpg"
+    },
+    {
+      "file": "RanaTemporaria-5bae17ab.jpg",
+      "w": 1255,
+      "h": 949,
+      "source": "Wikimedia Commons · Ranidae 蛙科分类",
+      "license": "free",
+      "url": "(本地文件) RanaTemporaria-5bae17ab.jpg"
+    }
+  ],
+  "fighterVariants": [
+    {
+      "fighterId": "big",
+      "name": "大奶蛙",
+      "tint": "#ffd94d",
+      "baseImage": "960px-Anura_Diversity-325c0157.jpg",
+      "baseSource": "(本地文件) 960px-Anura_Diversity-325c0157.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    },
+    {
+      "fighterId": "small",
+      "name": "小奶蛙",
+      "tint": "#7ec850",
+      "baseImage": "RanaTemporaria-5bae17ab.jpg",
+      "baseSource": "(本地文件) RanaTemporaria-5bae17ab.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    },
+    {
+      "fighterId": "rainbow",
+      "name": "彩虹奶蛙",
+      "tint": "#ff6ec7",
+      "baseImage": "960px-Anura_Diversity-325c0157.jpg",
+      "baseSource": "(本地文件) 960px-Anura_Diversity-325c0157.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    },
+    {
+      "fighterId": "gold",
+      "name": "金曜奶蛙",
+      "tint": "#ffb300",
+      "baseImage": "RanaTemporaria-5bae17ab.jpg",
+      "baseSource": "(本地文件) RanaTemporaria-5bae17ab.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    },
+    {
+      "fighterId": "ice",
+      "name": "冰霜奶蛙",
+      "tint": "#5aa8ff",
+      "baseImage": "960px-Anura_Diversity-325c0157.jpg",
+      "baseSource": "(本地文件) 960px-Anura_Diversity-325c0157.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    },
+    {
+      "fighterId": "flame",
+      "name": "烈焰奶蛙",
+      "tint": "#ff5a3c",
+      "baseImage": "RanaTemporaria-5bae17ab.jpg",
+      "baseSource": "(本地文件) RanaTemporaria-5bae17ab.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    },
+    {
+      "fighterId": "ninja",
+      "name": "影忍奶蛙",
+      "tint": "#8a6bff",
+      "baseImage": "960px-Anura_Diversity-325c0157.jpg",
+      "baseSource": "(本地文件) 960px-Anura_Diversity-325c0157.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    },
+    {
+      "fighterId": "samurai",
+      "name": "武侍奶蛙",
+      "tint": "#e8ecff",
+      "baseImage": "RanaTemporaria-5bae17ab.jpg",
+      "baseSource": "(本地文件) RanaTemporaria-5bae17ab.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    },
+    {
+      "fighterId": "healer",
+      "name": "治疗奶蛙",
+      "tint": "#ff8ac8",
+      "baseImage": "960px-Anura_Diversity-325c0157.jpg",
+      "baseSource": "(本地文件) 960px-Anura_Diversity-325c0157.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    },
+    {
+      "fighterId": "thunder",
+      "name": "雷电奶蛙",
+      "tint": "#ffe14d",
+      "baseImage": "RanaTemporaria-5bae17ab.jpg",
+      "baseSource": "(本地文件) RanaTemporaria-5bae17ab.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    },
+    {
+      "fighterId": "shadow",
+      "name": "幽冥奶蛙",
+      "tint": "#3a2f6b",
+      "baseImage": "960px-Anura_Diversity-325c0157.jpg",
+      "baseSource": "(本地文件) 960px-Anura_Diversity-325c0157.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    },
+    {
+      "fighterId": "boss",
+      "name": "奶蛙之神",
+      "tint": "#ffffff",
+      "baseImage": "RanaTemporaria-5bae17ab.jpg",
+      "baseSource": "(本地文件) RanaTemporaria-5bae17ab.jpg",
+      "license": "free",
+      "note": "换色变体由前端 canvas 程序化生成（NAIWA.tintSprite）"
+    }
+  ]
+}
