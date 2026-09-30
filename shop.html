@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛒 奶蛙购 · 官方周边商城</title>
+<link rel="icon" href="naiwa.webp">
+<style>
+  :root{
+    --bg:#05071a; --panel:rgba(16,22,48,.72); --ink:#e8ecff; --muted:#8b93c8;
+    --frog1:#ffd94d; --cyan:#22d3ee; --accent:#ff6ec7; --green:#7ec850; --line:#2a3a6a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%, rgba(34,211,238,.10), transparent 60%), var(--bg);
+    color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;min-height:100vh;
+  }
+  canvas#netbg{position:fixed;inset:0;z-index:0;opacity:.4}
+  header{position:relative;z-index:2;text-align:center;padding:34px 16px 6px}
+  h1{font-size:clamp(26px,4.5vw,42px);letter-spacing:3px;
+    background:linear-gradient(90deg,#ffd94d,#ff6ec7,#22d3ee);background-size:300% 100%;
+    -webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
+  @keyframes flow{0%{background-position:0% 0}100%{background-position:300% 0}}
+  .subtitle{color:var(--muted);margin-top:8px;font-size:14px}
+  nav{position:sticky;top:0;z-index:50;background:rgba(5,7,26,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin-top:18px}
+  nav .inner{max-width:1280px;margin:0 auto;display:flex;gap:6px;padding:10px 20px;overflow-x:auto;scrollbar-width:none}
+  nav a{text-decoration:none;color:var(--ink);font-size:13px;padding:6px 16px;border-radius:20px;white-space:nowrap;transition:all .25s;border:1px solid transparent}
+  nav a:hover{color:var(--cyan);border-color:rgba(34,211,238,.5);box-shadow:0 0 14px rgba(34,211,238,.25)}
+  nav a.hot{color:var(--frog1)}
+  .wrap{position:relative;z-index:2;max-width:1280px;margin:0 auto;padding:22px 20px 80px}
+
+  .banner{
+    display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+    background:linear-gradient(120deg,rgba(255,217,77,.08),rgba(255,110,199,.08));
+    border:1px solid rgba(255,217,77,.3);border-radius:20px;padding:20px 26px;margin-bottom:24px;
+  }
+  .banner img{width:70px;height:70px;object-fit:contain;filter:drop-shadow(0 0 14px rgba(255,217,77,.4))}
+  .banner div h3{font-size:19px}
+  .banner div p{font-size:12.5px;color:var(--muted);margin-top:4px}
+  .banner .off{margin-left:auto;font-size:26px;font-weight:900;color:var(--accent);text-shadow:0 0 16px rgba(255,110,199,.5)}
+
+  .cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .cats button{
+    border:1px solid var(--line);background:rgba(16,22,48,.5);color:var(--muted);
+    border-radius:20px;padding:7px 18px;font-size:13px;cursor:pointer;font-family:inherit;transition:all .25s;
+  }
+  .cats button.on{background:linear-gradient(135deg,#22d3ee,#ffd94d);color:#05071a;font-weight:700;border-color:transparent;box-shadow:0 0 16px rgba(34,211,238,.35)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+  .card{
+    background:var(--panel);backdrop-filter:blur(8px);border-radius:18px;border:1px solid var(--line);
+    padding:16px;transition:all .3s;position:relative;overflow:hidden;
+  }
+  .card:hover{transform:translateY(-5px);box-shadow:0 0 30px rgba(34,211,238,.2);border-color:rgba(34,211,238,.4)}
+  .card .img{
+    height:150px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;
+    background:radial-gradient(circle at 50% 60%, rgba(255,217,77,.08), transparent 70%);border-radius:12px;
+  }
+  .card .img img{max-width:110px;max-height:140px;object-fit:contain;filter:drop-shadow(0 8px 16px rgba(0,0,0,.4));transition:transform .3s}
+  .card:hover .img img{transform:scale(1.1) rotate(-3deg)}
+  .card .img .emoji{font-size:80px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.4));transition:transform .3s}
+  .card:hover .img .emoji{transform:scale(1.1) rotate(-3deg)}
+  .card h4{font-size:15px;margin-bottom:4px}
+  .card .desc{font-size:11.5px;color:var(--muted);line-height:1.6;min-height:36px}
+  .card .price-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+  .card .price{font-size:19px;font-weight:800;color:var(--accent)}
+  .card .price small{font-size:11px;color:var(--muted);font-weight:400;text-decoration:line-through;margin-left:6px}
+  .card .sold{font-size:10px;color:var(--muted)}
+  .add-btn{
+    width:100%;margin-top:12px;border:none;cursor:pointer;font-size:13px;font-weight:700;
+    padding:10px;border-radius:12px;color:#05071a;background:linear-gradient(135deg,#22d3ee,#ffd94d);
+    font-family:inherit;transition:all .25s;
+  }
+  .add-btn:hover{box-shadow:0 0 18px rgba(34,211,238,.45)}
+  .add-btn.added{background:var(--green);color:#05071a}
+  .badge{position:absolute;top:12px;right:-32px;background:var(--accent);color:#fff;font-size:10px;padding:3px 38px;transform:rotate(35deg);box-shadow:0 0 14px rgba(255,110,199,.5)}
+  .badge.new{background:var(--green)}
+
+  /* 购物车浮球 */
+  .cart-fab{
+    position:fixed;right:26px;bottom:26px;z-index:60;width:64px;height:64px;border-radius:50%;
+    background:linear-gradient(135deg,#22d3ee,#ffd94d);display:flex;align-items:center;justify-content:center;
+    font-size:28px;cursor:pointer;box-shadow:0 0 30px rgba(34,211,238,.5);transition:transform .2s;border:none;
+  }
+  .cart-fab:hover{transform:scale(1.1)}
+  .cart-fab .count{
+    position:absolute;top:-4px;right:-4px;background:var(--accent);color:#fff;font-size:12px;font-weight:800;
+    min-width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;padding:0 5px;
+  }
+  .cart-drawer{
+    position:fixed;right:0;top:0;bottom:0;width:min(360px,90vw);z-index:70;background:#0d1430;
+    border-left:1px solid var(--line);padding:22px;transform:translateX(100%);transition:transform .35s cubic-bezier(.2,.8,.3,1);
+    overflow-y:auto;box-shadow:-20px 0 60px rgba(0,0,0,.5);
+  }
+  .cart-drawer.open{transform:none}
+  .cart-drawer h3{display:flex;justify-content:space-between;align-items:center;font-size:18px;margin-bottom:16px}
+  .cart-drawer h3 button{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer}
+  .cart-item{display:flex;align-items:center;gap:12px;padding:10px;background:rgba(16,22,48,.6);border-radius:12px;margin-bottom:10px}
+  .cart-item img{width:44px;height:44px;object-fit:contain}
+  .cart-item .info{flex:1}
+  .cart-item .info h5{font-size:13px}
+  .cart-item .info span{font-size:12px;color:var(--accent);font-weight:700}
+  .cart-item .qty{display:flex;align-items:center;gap:8px}
+  .cart-item .qty button{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--ink);cursor:pointer;font-size:14px}
+  .cart-item .qty b{font-size:13px;min-width:20px;text-align:center}
+  .cart-empty{text-align:center;color:var(--muted);padding:40px 0;font-size:13px}
+  .cart-total{display:flex;justify-content:space-between;font-size:16px;font-weight:800;padding:16px 0;border-top:1px dashed var(--line);margin-top:14px}
+  .cart-total span:last-child{color:var(--accent);font-size:22px}
+  .checkout-btn{
+    width:100%;border:none;cursor:pointer;font-size:15px;font-weight:800;padding:13px;border-radius:14px;
+    color:#05071a;background:linear-gradient(135deg,#ff6ec7,#ffd94d);font-family:inherit;box-shadow:0 0 20px rgba(255,110,199,.35);
+  }
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:65;opacity:0;pointer-events:none;transition:opacity .3s}
+  .overlay.open{opacity:1;pointer-events:auto}
+
+  .toast{
+    position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);z-index:80;
+    background:rgba(16,22,48,.95);border:1px solid var(--green);color:var(--green);font-size:13px;font-weight:700;
+    padding:11px 24px;border-radius:30px;opacity:0;transition:all .3s;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:20px 10px 40px;line-height:1.9;position:relative;z-index:2}
+  .disclaimer{border:1px solid rgba(255,217,77,.25);border-radius:12px;display:inline-block;padding:8px 18px;background:rgba(255,217,77,.04)}
+</style>
+</head>
+<body>
+<canvas id="netbg"></canvas>
+
+<header>
+  <h1>🛒 奶蛙购</h1>
+  <div class="subtitle">奶蛙官方周边商城 · 诞辰庆典全场限时福利</div>
+</header>
+
+<nav><div class="inner">
+  <a href="index.html">📊 观测站</a>
+  <a href="race.html">🏎️ 奶蛙赛车</a>
+  <a href="battle.html">⚔️ 奶蛙决斗</a>
+  <a href="shop.html" class="hot">🛒 奶蛙购</a>
+</div></nav>
+
+<div class="wrap">
+  <div class="banner">
+    <img src="naiwa-standing.webp" alt="奶蛙">
+    <div>
+      <h3>🎂 诞辰庆典 · 全场第二件半价</h3>
+      <p>所有周边由奶蛙本体亲自监工 · 每一件都经过「齁齁齁」质检</p>
+    </div>
+    <div class="off">5折起</div>
+  </div>
+
+  <div class="cats" id="cats">
+    <button class="on" data-c="all">全部</button>
+    <button data-c="sticker">表情包周边</button>
+    <button data-c="figure">手办模型</button>
+    <button data-c="clothes">服饰穿搭</button>
+    <button data-c="life">生活用品</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<button class="cart-fab" id="cartFab">🛒<span class="count" id="cartCount">0</span></button>
+<div class="overlay" id="overlay"></div>
+<div class="cart-drawer" id="cartDrawer">
+  <h3>购物车 <button id="closeCart">×</button></h3>
+  <div id="cartItems"></div>
+  <div class="cart-total"><span>合计</span><span id="cartTotal">¥0.00</span></div>
+  <button class="checkout-btn" id="checkoutBtn">🐸 去结算（奶蛙付不起） </button>
+</div>
+<div class="toast" id="toast">已加入购物车！</div>
+
+<footer>
+  <div class="disclaimer">🐸 本站为庆祝奶蛙诞生而建 · 所有商品为虚拟展示，不支持真实下单（奶蛙的钱包也是表情包做的）</div>
+</footer>
+
+<script>
+/* ================= 背景粒子 ================= */
+(function(){
+  const cv=document.getElementById("netbg"),ctx=cv.getContext("2d");
+  let W,H,pts=[];
+  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;
+    pts=Array.from({length:Math.min(70,W*H/20000)},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4}));}
+  resize();addEventListener("resize",resize);
+  (function tick(){
+    ctx.clearRect(0,0,W,H);
+    for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;
+      ctx.fillStyle="rgba(255,217,77,.5)";ctx.beginPath();ctx.arc(p.x,p.y,1.3,0,7);ctx.fill();}
+    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+      const a=pts[i],b=pts[j],d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(d<120){ctx.strokeStyle=`rgba(34,211,238,${(1-d/120)*.22})`;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+    }
+    requestAnimationFrame(tick);
+  })();
+})();
+
+/* ================= 商品数据 ================= */
+const products=[
+  {id:1,c:"sticker",name:"奶蛙思考贴纸包",img:"naiwa-thinking.webp",price:9.9,old:19.9,sold:"2.3万",desc:"一包 30 张，「让我想想」万能回复，贴满你的工位。",badge:"new"},
+  {id:2,c:"sticker",name:"奶蛙大笑鼠标垫",img:"naiwa-smiling.webp",price:19.9,old:39.9,sold:"1.8万",desc:"每天打开电脑，被「齁齁齁」治愈一次。"},
+  {id:3,c:"figure",name:"奶蛙大胖手办",img:"naiwa-standing.webp",price:99,old:199,sold:"8600",desc:"1:1 还原梨形身材，小头大肚，看透一切的眼神。",badge:"热"},
+  {id:4,c:"figure",name:"金色奶蛙雕像",emoji:"🐸",price:299,old:999,sold:"328",desc:"传说款！999 足金（假的），摆在家里招财（心情好就行）。",badge:"限定"},
+  {id:5,c:"clothes",name:"奶蛙T恤·齁齁齁",emoji:"👕",price:59,old:99,sold:"5.2万",desc:"胸前一排「齁齁齁」，谁穿谁是整条街最抽象的仔。"},
+  {id:6,c:"clothes",name:"奶蛙睡帽",emoji:"🎩",price:29.9,old:59.9,sold:"9800",desc:"戴上就能梦见奶蛙在对你笑（也可能会做噩梦）。"},
+  {id:7,c:"life",name:"奶蛙马克杯",emoji:"☕",price:39.9,old:79.9,sold:"3.1万",desc:"杯底藏一只小奶蛙，喝完水它浮出水面跟你打招呼。",badge:"new"},
+  {id:8,c:"life",name:"奶蛙抱枕·大号",emoji:"🛏️",price:89,old:169,sold:"1.2万",desc:"抱着就像抱着一整个网络情绪容器，软软的，很安心。"},
+  {id:9,c:"sticker",name:"奶蛙冰箱贴套装",emoji:"🧲",price:15.9,old:29.9,sold:"6700",desc:"思考/站立/大笑三种姿态，冰箱从此有了灵魂。"},
+  {id:10,c:"figure",name:"迷你奶蛙挂件",emoji:"🔑",price:19.9,old:39.9,sold:"4.4万",desc:"挂在钥匙上，每次开门都有人（蛙）对你笑。"}
+];
+
+/* ================= 购物车 ================= */
+let cart={};
+const grid=document.getElementById("grid");
+const cartCount=document.getElementById("cartCount");
+const cartItems=document.getElementById("cartItems");
+const cartTotal=document.getElementById("cartTotal");
+const toast=document.getElementById("toast");
+let curCat="all";
+
+function render(){
+  const list=products.filter(p=>curCat==="all"||p.c===curCat);
+  grid.innerHTML=list.map(p=>`
+    <div class="card">
+      ${p.badge?`<div class="badge ${p.badge==="new"?"new":""}">${p.badge}</div>`:""}
+      <div class="img">${p.img?`<img src="${p.img}" alt="${p.name}">`:`<div class="emoji">${p.emoji}</div>`}</div>
+      <h4>${p.name}</h4>
+      <div class="desc">${p.desc}</div>
+      <div class="price-row">
+        <span class="price">¥${p.price}<small>¥${p.old}</small></span>
+        <span class="sold">已售${p.sold}</span>
+      </div>
+      <button class="add-btn" onclick="addToCart(${p.id},this)">🛒 加入购物车</button>
+    </div>`).join("");
+}
+render();
+
+document.querySelectorAll("#cats button").forEach(b=>{
+  b.addEventListener("click",()=>{
+    document.querySelectorAll("#cats button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");curCat=b.dataset.c;render();
+  });
+});
+
+function addToCart(id,btn){
+  cart[id]=(cart[id]||0)+1;
+  btn.classList.add("added");btn.textContent="✓ 已加入";
+  setTimeout(()=>{btn.classList.remove("added");btn.textContent="🛒 加入购物车";},900);
+  toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),1500);
+  updateCart();
+}
+window.addToCart=addToCart;
+
+function updateCart(){
+  const ids=Object.keys(cart);
+  cartCount.textContent=ids.reduce((s,k)=>s+cart[k],0);
+  if(!ids.length){cartItems.innerHTML='<div class="cart-empty">购物车空空如也<br>奶蛙正在看着你……</div>';cartTotal.textContent="¥0.00";return;}
+  cartItems.innerHTML=ids.map(id=>{
+    const p=products.find(x=>x.id==id);
+    return `<div class="cart-item">
+      ${p.img?`<img src="${p.img}" alt="">`:`<div style="font-size:32px;width:44px;text-align:center">${p.emoji}</div>`}
+      <div class="info"><h5>${p.name}</h5><span>¥${p.price}</span></div>
+      <div class="qty">
+        <button onclick="chgQty(${id},-1)">−</button><b>${cart[id]}</b><button onclick="chgQty(${id},1)">+</button>
+      </div>
+    </div>`;
+  }).join("");
+  const total=ids.reduce((s,k)=>s+cart[k]*products.find(x=>x.id==k).price,0);
+  cartTotal.textContent="¥"+total.toFixed(2);
+}
+window.chgQty=function(id,d){
+  cart[id]+=d;if(cart[id]<=0)delete cart[id];updateCart();
+};
+
+const drawer=document.getElementById("cartDrawer"),overlay=document.getElementById("overlay");
+document.getElementById("cartFab").addEventListener("click",()=>{drawer.classList.add("open");overlay.classList.add("open");updateCart();});
+document.getElementById("closeCart").addEventListener("click",()=>{drawer.classList.remove("open");overlay.classList.remove("open");});
+overlay.addEventListener("click",()=>{drawer.classList.remove("open");overlay.classList.remove("open");});
+
+document.getElementById("checkoutBtn").addEventListener("click",()=>{
+  if(!Object.keys(cart).length){toast.textContent="购物车是空的！";toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),1500);return;}
+  toast.textContent="🐸 奶蛙说：你的心意我收下了，钱就免了～";
+  toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),2500);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ 奶蛙决斗场 · 大奶蛙 VS 小奶蛙</title>
+<link rel="icon" href="naiwa.webp">
+<style>
+  :root{
+    --bg:#05071a; --ink:#e8ecff; --muted:#8b93c8; --line:#2a3a6a;
+    --frog1:#ffd94d; --cyan:#22d3ee; --accent:#ff6ec7; --green:#7ec850;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:radial-gradient(1000px 600px at 50% -10%, rgba(34,211,238,.12), transparent 60%), var(--bg);
+    color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;
+  }
+  header{text-align:center;padding:22px 14px 8px}
+  h1{font-size:clamp(22px,4vw,34px);letter-spacing:3px;
+    background:linear-gradient(90deg,#ff5a5a,#ffd94d,#22d3ee);background-size:250% 100%;
+    -webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite}
+  @keyframes flow{0%{background-position:0 0}100%{background-position:250% 0}}
+  .sub{color:var(--muted);font-size:13px;margin-top:6px}
+  a.back{color:var(--cyan);text-decoration:none;font-size:13px;position:absolute;left:16px;top:24px;border:1px solid rgba(34,211,238,.35);border-radius:20px;padding:5px 14px}
+  a.back:hover{box-shadow:0 0 14px rgba(34,211,238,.35)}
+
+  .stage{position:relative;margin:10px 0;width:min(960px,96vw)}
+  canvas#game{width:100%;display:block;border-radius:18px;border:1px solid var(--line);box-shadow:0 0 40px rgba(255,90,90,.15);background:#070b22;touch-action:none}
+
+  .overlay{
+    position:absolute;inset:0;border-radius:18px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;text-align:center;
+    background:rgba(5,7,26,.86);backdrop-filter:blur(4px);padding:26px;
+  }
+  .overlay.hidden{display:none}
+  .overlay h2{font-size:30px;letter-spacing:2px}
+  .overlay p{color:var(--muted);font-size:13px;line-height:1.9;max-width:480px}
+  .btn{border:none;cursor:pointer;font-size:15px;font-weight:800;padding:13px 40px;border-radius:30px;color:#05071a;background:linear-gradient(135deg,#ff5a5a,#ffd94d);box-shadow:0 0 24px rgba(255,90,90,.45);font-family:inherit;transition:all .25s}
+  .btn:hover{transform:translateY(-3px);box-shadow:0 0 34px rgba(255,90,90,.7)}
+  .keys{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--muted)}
+  .keys b{border:1px solid var(--line);border-radius:8px;padding:4px 10px;color:var(--ink);font-family:Consolas,monospace}
+  .char-grid{display:flex;gap:22px;margin:6px 0}
+  .char-card{border:1px solid var(--line);border-radius:16px;padding:14px 18px;background:rgba(16,22,48,.6);width:190px}
+  .char-card img{width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 0 14px rgba(255,217,77,.4))}
+  .char-card h3{font-size:16px;margin:8px 0 4px}
+  .char-card .skills{font-size:12px;color:var(--muted);line-height:1.9}
+  .char-card .skills b{color:var(--frog1)}
+  .char-card.p2 .skills b{color:var(--accent)}
+
+  /* KO 大字 */
+  .ko-text{
+    position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);
+    font-size:min(18vw,140px);font-weight:900;color:#ff5a5a;letter-spacing:8px;
+    text-shadow:0 0 40px rgba(255,90,90,.9),0 0 80px rgba(255,90,90,.5);
+    pointer-events:none;opacity:0;z-index:20;
+  }
+  .ko-text.show{animation:koIn 1.1s cubic-bezier(.2,1.4,.3,1) both}
+  @keyframes koIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-8deg)}60%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(2deg)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+
+  footer{color:var(--muted);font-size:12px;padding:14px;text-align:center;line-height:1.9}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← 观测站</a>
+<a class="back" href="shop.html" style="left:auto;right:16px">奶蛙购 →</a>
+<header>
+  <h1>⚔️ 奶蛙决斗场</h1>
+  <div class="sub">死神VS火影式格斗 · 大奶蛙【笑·哭】 VS 小奶蛙【装死】</div>
+</header>
+
+<div class="stage">
+  <canvas id="game" width="960" height="540"></canvas>
+  <div class="ko-text" id="koText">K.O.</div>
+
+  <div class="overlay" id="menu">
+    <h2>奶蛙决斗场</h2>
+    <div class="char-grid">
+      <div class="char-card">
+        <img src="naiwa-smiling.webp" alt="大奶蛙">
+        <h3>大奶蛙（你）</h3>
+        <div class="skills">技能① <b>笑</b>：癫狂声波，远程连段<br>技能② <b>哭</b>：泪之瀑布，近身高伤<br>血量 100 · 体型大，速度中</div>
+      </div>
+      <div class="char-card p2">
+        <img src="naiwa-thinking.webp" alt="小奶蛙">
+        <h3>小奶蛙（AI）</h3>
+        <div class="skills">技能 <b>装死</b>：原地趴倒无敌 2 秒，起身反扑<br>血量 80 · 体型小，速度快</div>
+      </div>
+    </div>
+    <div class="keys">
+      <span><b>A D</b> 移动</span><span><b>W</b> 跳跃</span>
+      <span><b>J</b> 技能·笑</span><span><b>K</b> 技能·哭</span>
+    </div>
+    <p style="font-size:11px">手机：左半屏左右滑动移动，右半屏点按出招</p>
+    <button class="btn" id="startBtn">⚔️ 开战！</button>
+  </div>
+
+  <div class="overlay hidden" id="endScreen">
+    <h2 id="endTitle">胜负已分</h2>
+    <p id="endDesc"></p>
+    <button class="btn" id="againBtn">🔄 再战一局</button>
+  </div>
+</div>
+
+<footer>
+  🐸 奶蛙形象素材：naiwa.world 官方档案（思考/站立/大笑三姿）· 非商用玩梗<br>
+  小奶蛙装死时完全无敌，大奶蛙记得算好他起身的瞬间再出手！
+</footer>
+
+<script>
+(function(){
+"use strict";
+const cv=document.getElementById("game"),ctx=cv.getContext("2d");
+const W=cv.width,H=cv.height;
+const GROUND=H-90;
+
+/* ---------- 素材 ---------- */
+const IMGS={
+  big:new Image(), small:new Image(), bigAtk:new Image(), smallDead:new Image()
+};
+IMGS.big.src="naiwa-standing.webp";      // 大奶蛙 站立
+IMGS.bigAtk.src="naiwa-smiling.webp";    // 大奶蛙 笑（攻击姿态）
+IMGS.small.src="naiwa-thinking.webp";    // 小奶蛙 思考
+IMGS.smallDead.src="naiwa-standing.webp";// 小奶蛙 装死用站立图旋转
+let loaded=0;
+Object.values(IMGS).forEach(im=>im.onload=()=>loaded++);
+
+/* ---------- 游戏状态 ---------- */
+let state="menu";
+let shake=0, slowmo=0;
+const keys={};
+addEventListener("keydown",e=>{keys[e.key.toLowerCase()]=true;
+  if(["w","a","d","j","k"," "].includes(e.key.toLowerCase()))e.preventDefault();});
+addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false;});
+let touchL=null;
+cv.addEventListener("pointerdown",e=>{
+  const r=cv.getBoundingClientRect();
+  if((e.clientX-r.left)/r.width<0.5){touchL=e.clientX;}
+  else{skill1();}
+});
+cv.addEventListener("pointermove",e=>{if(touchL!==null)touchL=e.clientX;});
+cv.addEventListener("pointerup",()=>{touchL=null;});
+
+/* ---------- 角色 ---------- */
+const P1={ // 大奶蛙
+  name:"大奶蛙",img:"big",atkImg:"bigAtk",
+  x:180,y:GROUND,vx:0,vy:0,face:1,
+  w:130,h:130,hp:100,maxHp:100,speed:4.6,jumpP:14,
+  atkT:0,cd1:0,cd2:0,hurtT:0,onGround:true,dead:false
+};
+const P2={ // 小奶蛙
+  name:"小奶蛙",img:"small",atkImg:"small",
+  x:720,y:GROUND,vx:0,vy:0,face:-1,
+  w:78,h:78,hp:80,maxHp:80,speed:6.2,jumpP:13,
+  atkT:0,cd1:0,hurtT:0,onGround:true,dead:false,
+  playingDead:false,deadT:0,aiT:0
+};
+let projectiles=[],floaters=[],parts=[],roundT=99;
+
+function reset(){
+  Object.assign(P1,{x:180,y:GROUND,vx:0,vy:0,face:1,hp:P1.maxHp,atkT:0,cd1:0,cd2:0,hurtT:0,dead:false});
+  Object.assign(P2,{x:720,y:GROUND,vx:0,vy:0,face:-1,hp:P2.maxHp,atkT:0,cd1:0,hurtT:0,dead:false,playingDead:false,deadT:0,aiT:0});
+  projectiles=[];floaters=[];parts=[];roundT=99;
+}
+
+/* ---------- 技能 ---------- */
+function skill1(){ // 大奶蛙·笑
+  if(state!=="run"||P1.cd1>0||P1.dead)return;
+  P1.cd1=1.2;P1.atkT=0.35;
+  for(let i=0;i<3;i++){
+    setTimeout(()=>{if(state!=="run"||P1.dead)return;
+      projectiles.push({
+        type:"laugh",x:P1.x+P1.face*70,y:P1.y-50,vx:P1.face*(9+i*1.5),
+        r:18+i*10,dmg:8,hit:false,t:0,from:1
+      });
+      shake=0.15;
+    },i*140);
+  }
+  addFloat(P1.x,P1.y-90,"齁齁齁！","#ffd94d",22);
+}
+function skill2(){ // 大奶蛙·哭
+  if(state!=="run"||P1.cd2>0||P1.dead)return;
+  P1.cd2=2.8;P1.atkT=0.5;
+  for(let i=0;i<8;i++){
+    setTimeout(()=>{if(state!=="run"||P1.dead)return;
+      projectiles.push({
+        type:"tear",x:P1.x+(Math.random()-.5)*140+P1.face*80,y:P1.y-160-Math.random()*80,
+        vx:P1.face*2,vy:2+Math.random()*3,ay:0.55,r:12,dmg:6,hit:false,from:1
+      });
+    },i*90);
+  }
+  addFloat(P1.x,P1.y-90,"呜呜呜……","#5aa8ff",20);
+}
+
+/* ---------- 特效 ---------- */
+function addFloat(x,y,txt,color,size){
+  floaters.push({x,y,txt,color,size,t:0,vy:-1.6});
+}
+function burst(x,y,color,n=10){
+  for(let i=0;i<n;i++)parts.push({
+    x,y,vx:(Math.random()-.5)*260,vy:(Math.random()-.5)*260-80,
+    life:.5+Math.random()*.4,t:0,color,r:2+Math.random()*4
+  });
+}
+function hitFx(p,dmg,from){
+  if(from===1){p.hurtT=0.3;p.hp=Math.max(0,p.hp-dmg);
+    addFloat(p.x,p.y-p.h-20,"-"+dmg,"#ff5a5a",26);
+    burst(p.x,p.y-p.h/2,"#ff5a5a",12);shake=0.25;}
+}
+
+/* ---------- 主循环 ---------- */
+let last=performance.now();
+function loop(now){
+  let dt=Math.min((now-last)/1000,0.05);last=now;
+  if(slowmo>0){slowmo-=dt;dt*=0.3;}
+  if(state==="run"){update(dt);roundT-=dt;if(roundT<=0)timeUp();}
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function update(dt){
+  /* --- 大奶蛙 玩家 --- */
+  if(!P1.dead){
+    P1.cd1=Math.max(0,P1.cd1-dt);P1.cd2=Math.max(0,P1.cd2-dt);
+    P1.atkT=Math.max(0,P1.atkT-dt);P1.hurtT=Math.max(0,P1.hurtT-dt);
+    let dir=0;
+    if(keys["a"])dir=-1;if(keys["d"])dir=1;
+    if(touchL!==null){
+      const r=cv.getBoundingClientRect();
+      dir=(touchL-r.left)/r.width<0.5*(P1.x/W*2-0.4)?-1:1;
+      dir=(Math.abs(touchL-r.left)/r.width*W-P1.x)/40;
+      dir=Math.max(-1,Math.min(1,dir));
+    }
+    P1.vx=dir*P1.speed;
+    if(dir!==0)P1.face=dir>0?1:-1;
+    if(keys["w"]&&P1.onGround){P1.vy=-P1.jumpP;P1.onGround=false;}
+    if(keys["j"])skill1();
+    if(keys["k"])skill2();
+  }else{P1.vx=0;}
+
+  /* --- 小奶蛙 AI --- */
+  if(!P2.dead){
+    P2.cd1=Math.max(0,P2.cd1-dt);P2.atkT=Math.max(0,P2.atkT-dt);P2.hurtT=Math.max(0,P2.hurtT-dt);
+    P2.aiT-=dt;
+    if(P2.playingDead){
+      P2.deadT-=dt;P2.vx=0;
+      if(P2.deadT<=0){
+        P2.playingDead=false;
+        // 装死结束 → 反扑
+        P2.face=P1.x>P2.x?1:-1;
+        P2.vx=P2.face*22;P2.atkT=0.4;
+        addFloat(P2.x,P2.y-P2.h-16,"装死结束！","#ff6ec7",18);
+      }
+    }else{
+      const dist=P1.x-P2.x;
+      // AI 决策：接近→装死规避→反扑
+      if(P2.aiT<=0){
+        P2.aiT=0.5+Math.random()*0.6;
+        if(Math.abs(dist)<140&&Math.random()<0.5&&P2.cd1<=0){
+          P2.cd1=4.5;P2.playingDead=true;P2.deadT=1.8+Math.random()*0.7;
+          addFloat(P2.x,P2.y-P2.h-16,"装死！","#ff6ec7",20);
+        }
+      }
+      if(!P2.playingDead&&Math.abs(P2.vx)<6){
+        if(Math.abs(dist)>110){P2.face=dist>0?1:-1;P2.vx=P2.face*P2.speed;}
+        else{P2.vx=0;
+          if(P2.atkT<=0){P2.atkT=0.3; // 近身撞击
+            if(Math.abs(dist)<P2.w+P1.w/2&&P1.hurtT<=0&&P2.y+P2.h>=P1.y-P1.h){
+              hitFx(P1,5,2);
+            }
+          }
+        }
+      }
+    }
+  }else{P2.vx=0;}
+
+  // 物理
+  for(const p of [P1,P2]){
+    p.vy+=0.8;
+    p.x+=p.vx*dt*60/60*(p.vx?1:0);
+    p.x+=p.vx; // frame-based 简化
+    p.vx*=0.86;
+    p.y+=p.vy;
+    if(p.y>=GROUND){p.y=GROUND;p.vy=0;p.onGround=true;}
+    p.x=Math.max(p.w/2+20,Math.min(W-p.w/2-20,p.x));
+  }
+  // 反扑伤害判定（小奶蛙 atkT 期间撞到大奶蛙）
+  if(!P2.dead&&P2.atkT>0.2&&Math.abs(P2.vx)>8){
+    const d=Math.hypot(P2.x-P1.x,P2.y-P1.y);
+    if(d<(P2.w+P1.w)/2&&P1.hurtT<=0){hitFx(P1,14,2);P2.vx*=-0.4;}
+  }
+
+  /* --- 投射物 --- */
+  for(const pr of projectiles){
+    pr.t=(pr.t||0)+dt;
+    if(pr.type==="laugh"){
+      pr.x+=pr.vx;pr.r+=1.2;
+      // 命中
+      const target=pr.from===1?P2:P1;
+      if(!pr.hit&&!target.dead&&!target.playingDead){
+        if(Math.abs(pr.x-target.x)<target.w/2+pr.r&&Math.abs(pr.y-(target.y-target.h/2))<target.h){
+          pr.hit=true;hitFx(target,pr.dmg,pr.from);
+        }
+      }
+    }else if(pr.type==="tear"){
+      pr.vy+=pr.ay;pr.x+=pr.vx;pr.y+=pr.vy;
+      const target=pr.from===1?P2:P1;
+      if(!pr.hit&&!target.dead&&!target.playingDead){
+        if(Math.abs(pr.x-target.x)<target.w/2+pr.r&&pr.y>target.y-target.h&&pr.y<target.y){
+          pr.hit=true;hitFx(target,pr.dmg,pr.from);
+        }
+      }
+      if(pr.y>=GROUND){pr.hit=true;burst(pr.x,GROUND,"#5aa8ff",4);}
+    }
+  }
+  projectiles=projectiles.filter(p=>!p.hit&&p.x>-80&&p.x<W+80&&p.y<H+40);
+
+  /* --- 特效粒子 --- */
+  for(const p of parts){p.t+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=300*dt;}
+  parts=parts.filter(p=>p.t<p.life);
+  for(const f of floaters){f.t+=dt;f.y+=f.vy;}
+  floaters=floaters.filter(f=>f.t<1.2);
+
+  /* --- 胜负 --- */
+  if(!P2.dead&&P2.hp<=0){P2.dead=true;endRound("win");}
+  if(!P1.dead&&P1.hp<=0){P1.dead=true;endRound("lose");}
+}
+
+function timeUp(){
+  endRound(P1.hp>P2.hp?"win":"lose");
+}
+function endRound(res){
+  state="end";slowmo=0.9;shake=0.5;
+  const ko=document.getElementById("koText");
+  ko.classList.remove("show");void ko.offsetWidth;ko.classList.add("show");
+  setTimeout(()=>{
+    document.getElementById("endTitle").textContent=res==="win"?"🏆 大奶蛙获胜！":"😵 小奶蛙获胜！";
+    document.getElementById("endDesc").textContent=res==="win"
+      ?"你的笑声震碎了一切！小奶蛙装死也没用——这就是大奶蛙的压迫感。"
+      :"小奶蛙的装死战术成功了……下次算准他起身的瞬间再出手！";
+    document.getElementById("endScreen").classList.remove("hidden");
+  },1400);
+}
+
+/* ---------- 渲染 ---------- */
+function drawChar(p){
+  const img=p.atkT>0?IMGS[p.atkImg]:IMGS[p.img];
+  ctx.save();
+  ctx.translate(p.x,p.y);
+  ctx.scale(p.face,1);
+  // 受击闪红
+  if(p.hurtT>0&&Math.floor(p.hurtT*20)%2===0)ctx.globalAlpha=0.4;
+  // 装死姿态
+  if(p.playingDead){
+    ctx.rotate(-Math.PI/2*0.9);
+    ctx.translate(0,10);
+  }
+  // 待机浮动
+  const bob=p.onGround?Math.sin(performance.now()/300)*4:0;
+  ctx.drawImage(img,-p.w/2,-p.h+bob,p.w,p.h);
+  ctx.restore();
+  // 装死提示
+  if(p.playingDead){
+    ctx.fillStyle="#ff6ec7";ctx.font="bold 13px sans-serif";ctx.textAlign="center";
+    ctx.fillText("💀 装死中（无敌）",p.x,p.y-p.h-10);
+  }
+}
+function draw(){
+  ctx.save();
+  if(shake>0){shake-=0.016;ctx.translate((Math.random()-.5)*14*shake,(Math.random()-.5)*14*shake);}
+  // 背景
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,"#0a0e28");g.addColorStop(1,"#05071a");
+  ctx.fillStyle=g;ctx.fillRect(-20,-20,W+40,H+40);
+  // 决斗场地面霓虹
+  ctx.shadowBlur=16;ctx.shadowColor="#ff5a5a";
+  ctx.strokeStyle="#ff5a5a";ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(0,GROUND+1);ctx.lineTo(W,GROUND+1);ctx.stroke();
+  ctx.shadowBlur=0;
+  // 背景月亮
+  ctx.fillStyle="rgba(255,217,77,.12)";
+  ctx.beginPath();ctx.arc(W/2,130,90,0,7);ctx.fill();
+
+  if(state==="menu"){drawChar(P1);drawChar(P2);ctx.restore();return;}
+
+  /* ---- HP 条 ---- */
+  // P1
+  ctx.fillStyle="rgba(5,7,26,.75)";ctx.beginPath();ctx.roundRect(16,16,380,54,12);ctx.fill();
+  ctx.fillStyle="#0d1430";ctx.beginPath();ctx.roundRect(26,28,300,18,9);ctx.fill();
+  const p1hp=P1.hp/P1.maxHp;
+  ctx.fillStyle=p1hp>.3?"#ffd94d":"#ff5a5a";
+  ctx.beginPath();ctx.roundRect(26,28,300*p1hp,18,9);ctx.fill();
+  ctx.fillStyle="#e8ecff";ctx.font="bold 13px sans-serif";ctx.textAlign="left";
+  ctx.fillText("大奶蛙",26,62);
+  // 技能 CD
+  ctx.fillStyle="#0d1430";ctx.beginPath();ctx.roundRect(100,50,60,12,6);ctx.fill();
+  ctx.fillStyle="#22d3ee";ctx.beginPath();ctx.roundRect(100,50,60*(1-P1.cd1/1.2),12,6);ctx.fill();
+  ctx.fillStyle="#0d1430";ctx.beginPath();ctx.roundRect(166,50,60,12,6);ctx.fill();
+  ctx.fillStyle="#5aa8ff";ctx.beginPath();ctx.roundRect(166,50,60*(1-P1.cd2/2.8),12,6);ctx.fill();
+  ctx.fillStyle="#8b93c8";ctx.font="9px sans-serif";ctx.textAlign="center";
+  ctx.fillText("笑",130,59);ctx.fillText("哭",196,59);
+
+  // P2
+  ctx.fillStyle="rgba(5,7,26,.75)";ctx.beginPath();ctx.roundRect(W-396,16,380,54,12);ctx.fill();
+  ctx.fillStyle="#0d1430";ctx.beginPath();ctx.roundRect(W-326,28,300,18,9);ctx.fill();
+  const p2hp=P2.hp/P2.maxHp;
+  ctx.fillStyle=p2hp>.3?"#ff6ec7":"#ff5a5a";
+  ctx.beginPath();ctx.roundRect(W-326+300*(1-p2hp),28,300*p2hp,18,9);ctx.fill();
+  ctx.fillStyle="#e8ecff";ctx.font="bold 13px sans-serif";ctx.textAlign="right";
+  ctx.fillText("小奶蛙",W-26,62);
+
+  // 回合时间
+  ctx.fillStyle="#ffd94d";ctx.font="bold 22px Consolas,monospace";ctx.textAlign="center";
+  ctx.fillText(Math.ceil(roundT),W/2,42);
+
+  // 角色
+  drawChar(P1);drawChar(P2);
+
+  // 投射物
+  for(const pr of projectiles){
+    if(pr.type==="laugh"){
+      ctx.save();ctx.globalAlpha=Math.max(0,0.8-pr.t*0.5);
+      ctx.strokeStyle="#ffd94d";ctx.lineWidth=4;ctx.shadowBlur=16;ctx.shadowColor="#ffd94d";
+      ctx.beginPath();ctx.arc(pr.x,pr.y,pr.r,0,7);ctx.stroke();
+      ctx.restore();
+    }else if(pr.type==="tear"){
+      ctx.save();ctx.translate(pr.x,pr.y);
+      ctx.fillStyle="#5aa8ff";ctx.shadowBlur=8;ctx.shadowColor="#5aa8ff";
+      ctx.beginPath();ctx.ellipse(0,0,6,10,0,0,7);ctx.fill();
+      ctx.restore();
+    }
+  }
+  // 粒子
+  for(const p of parts){
+    ctx.globalAlpha=Math.max(0,1-p.t/p.life);
+    ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // 伤害飘字
+  for(const f of floaters){
+    ctx.globalAlpha=Math.max(0,1-f.t/1.2);
+    ctx.fillStyle=f.color;ctx.font=`bold ${f.size}px sans-serif`;ctx.textAlign="center";
+    ctx.shadowBlur=10;ctx.shadowColor=f.color;
+    ctx.fillText(f.txt,f.x,f.y);
+    ctx.shadowBlur=0;
+  }
+  ctx.globalAlpha=1;
+  ctx.restore();
+}
+
+/* ---------- 开始/重开 ---------- */
+document.getElementById("startBtn").addEventListener("click",start);
+document.getElementById("againBtn").addEventListener("click",start);
+function start(){
+  reset();
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("endScreen").classList.add("hidden");
+  document.getElementById("koText").classList.remove("show");
+  state="run";last=performance.now();
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
