@@ -329,6 +329,7 @@
 
 <div class="toolbar">
   <button class="btn ghost" id="pauseBtn">⏸️ 暂停</button>
+  <button class="btn ghost" id="skinBtn">🎨 立绘：原创</button>
   <button class="btn ghost" id="hitboxBtn">🔍 判定框</button>
   <button class="btn ghost" id="frameBtn">🎞️ 帧数据</button>
 </div>
@@ -345,6 +346,7 @@
 
 <script src="naiwa-common.js"></script>
 <script src="assets/fighters.js"></script>
+<script src="assets/frog-gen.js"></script>
 <script>
 /* ============================================================
    ⚔️ 奶蛙决斗场 · 战斗引擎 v2
@@ -436,6 +438,7 @@ var state = {
   ladder: 0,            // 闯关进度（0..5）
   hitstop: 0, shake: 0, slow: 0, flash: 0,
   showHitbox: false, showFrame: false,
+  skin: "auto",        // auto = 程序化原创立绘 | original = naiwa 原图换色
   stat: { hits: 0, maxCombo: 0, dmg: 0, time: 0 }
 };
 var DIFFS = [
@@ -473,23 +476,43 @@ var P = [null, null], projectiles = [], particles = [], floaters = [], afterimag
 /* 按「角色 + 实际像素尺寸」缓存。尺寸取整能大幅提高命中率，
    否则每个角色都要按 96/104/111… 生成好几份。 */
 var sprites = {};
+/* 立绘风格：auto = 程序化原创立绘（默认，12 位各有独立体型）；original = naiwa 原图换色 */
+function makeSkin(f, size) {
+  var opt = { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: size };
+  var c = {
+    idle: NAIWA.tintSprite(f.src, f.color, opt),
+    atk: NAIWA.tintSprite(f.atkSrc, f.accent, opt),
+    wind: NAIWA.tintSprite(f.sadSrc, f.color, opt),
+    hurt: NAIWA.tintSprite(f.sadSrc, f.color, opt),
+    rimAtk: NAIWA.tintSprite(f.atkSrc, f.glow || f.color, { hue: f.hue || 0, sat: f.sat || 1, size: size, alpha: .95, stroke: NAIWA.rgba(f.accent, 1) }),
+    rim: NAIWA.tintSprite(f.src, f.glow || f.color, { hue: f.hue || 0, sat: f.sat || 1, size: size, alpha: .9, stroke: NAIWA.rgba(f.color, 1) })
+  };
+  return c;
+}
 function buildSprites() {
-  /* 预热 12 位斗士在「标准体型」下的立绘，选人界面直接复用，避免占位图 */
+  /* 预热 12 位斗士的立绘：程序化原创立绘 + 原图换色各一份 */
   F.list.forEach(function (f) {
     var size = f.boss ? 120 : Math.round(96 * ((f.weight || 1) * 0.55 + 0.45));
-    var opt = { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: size };
+    var gen = null;
+    try {
+      gen = NAIWA.genFrog ? NAIWA.genFrog(f.id, size) : null;
+    } catch (e) { gen = null; }
+    var sk = makeSkin(f, size);
+    if (gen) {
+      sk.idle = gen;
+      sk.atk = gen;
+      sk.wind = gen;
+      sk.hurt = gen;
+      sk.rim = gen;
+      sk.rimAtk = gen;
+      sk.generated = true;
+    }
     sprites[f.id] = {
       size: {},
-      icon: NAIWA.tintSprite(f.src, f.color, { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: 128 })
+      /* 选人界面小图标：程序化立绘更好认 */
+      icon: gen || NAIWA.tintSprite(f.src, f.color, { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: 128 })
     };
-    sprites[f.id].size[size] = {
-      idle: NAIWA.tintSprite(f.src, f.color, opt),
-      atk: NAIWA.tintSprite(f.atkSrc, f.accent, opt),
-      wind: NAIWA.tintSprite(f.sadSrc, f.color, opt),
-      hurt: NAIWA.tintSprite(f.sadSrc, f.color, opt),
-      rimAtk: NAIWA.tintSprite(f.atkSrc, f.glow || f.color, { hue: f.hue || 0, sat: f.sat || 1, size: size, alpha: .95, stroke: NAIWA.rgba(f.accent, 1) }),
-      rim: NAIWA.tintSprite(f.src, f.glow || f.color, { hue: f.hue || 0, sat: f.sat || 1, size: size, alpha: .9, stroke: NAIWA.rgba(f.color, 1) })
-    };
+    sprites[f.id].size[size] = sk;
   });
 }
 function sprFor(e) {
@@ -498,22 +521,17 @@ function sprFor(e) {
   var hit = bucket.size[w];
   if (hit) return hit;
   var opt = { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: w };
-  var set = {
-    idle: NAIWA.tintSprite(f.src, f.color, opt),
-    atk:  NAIWA.tintSprite(f.src, f.accent, opt),
-    /* 预备/收招用的中间姿态，让动作有「起—爆—收」的层次 */
-    wind: NAIWA.tintSprite(f.thinkSrc || f.sadSrc || f.src, f.color, opt),
-    hurt: NAIWA.tintSprite(f.sadSrc, f.color, opt),
-    /* 高光轮廓：用于攻击瞬间的体积感与能量感 */
-    rimAtk: NAIWA.tintSprite(f.atkSrc, f.glow || f.color, {
-      hue: f.hue || 0, sat: f.sat || 1, size: w, alpha: .95, stroke: NAIWA.rgba(f.accent, 1)
-    }),
-    rim: NAIWA.tintSprite(f.src, f.glow || f.color, {
-      hue: f.hue || 0, sat: f.sat || 1, size: w, alpha: .9, stroke: NAIWA.rgba(f.color, 1)
-    })
-  };
-  bucket.size[w] = set;
-  return set;
+  var sk = makeSkin(f, w);
+  /* 立绘风格选择：state.skin === "original" 时用 naiwa 原图换色 */
+  if (state.skin !== "original" && NAIWA.genFrog) {
+    try {
+      var gcv = NAIWA.genFrog(f.id, w);
+      sk.idle = gcv; sk.atk = gcv; sk.wind = gcv; sk.hurt = gcv; sk.rim = gcv; sk.rimAtk = gcv;
+      sk.generated = true;
+    } catch (err) { }
+  }
+  bucket.size[w] = sk;
+  return sk;
 }
 /* 头顶读条背景色，避免每帧拼字符串 */
 function rgba(hex, a) { return NAIWA.rgba(hex, a); }
@@ -1939,6 +1957,29 @@ $("pauseBtn").addEventListener("click", function () {
 $("hitboxBtn").addEventListener("click", function () {
   state.showHitbox = !state.showHitbox;
   this.style.color = state.showHitbox ? "#ffd94d" : "";
+});
+$("skinBtn").addEventListener("click", function () {
+  state.skin = state.skin === "auto" ? "original" : "auto";
+  this.textContent = state.skin === "auto" ? "🎨 立绘：原创" : "🖼️ 立绘：奶蛙原图";
+  this.style.color = state.skin === "auto" ? "" : "#22d3ee";
+  /* 清掉尺寸缓存里的两套立绘，下一帧按新风格重建 */
+  Object.keys(sprites).forEach(function (k) { if (sprites[k] && sprites[k].size) sprites[k].size = {}; });
+  if (state.skin === "auto") {
+    F.list.forEach(function (f) {
+      var size = f.boss ? 120 : Math.round(96 * ((f.weight || 1) * 0.55 + 0.45));
+      var gen = NAIWA.genFrog ? NAIWA.genFrog(f.id, size) : null;
+      if (gen && sprites[f.id]) sprites[f.id].icon = gen;
+    });
+  } else {
+    F.list.forEach(function (f) {
+      if (sprites[f.id]) sprites[f.id].icon = NAIWA.tintSprite(f.src, f.color, { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: 128 });
+    });
+  }
+  /* 选人头像也跟着换 */
+  if (P[0] && P[1]) { sprFor(P[0]); sprFor(P[1]); }
+  buildRoster(0); buildRoster(1);
+  refreshPick();
+  NAIWA.toast(state.skin === "auto" ? "已切换：原创程序化立绘（12 位各有独立体型）" : "已切换：naiwa 原图换色立绘", "#ffd94d");
 });
 $("frameBtn").addEventListener("click", function () {
   state.showFrame = !state.showFrame;

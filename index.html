@@ -7,6 +7,8 @@
 <link rel="icon" href="naiwa.webp">
 <script src="echarts.min.js"></script>
 <script>window.echarts||document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"><\/script>')</script>
+<!-- 真实传播数据（由 tools/naiwa_pageviews.py 生成；不存在时页面自动退回推演数据） -->
+<script src="assets/naiwa-data/naiwa-reality.js" onerror="window.__noReality=1"></script>
 <style>
   :root{
     --bg:#05071a; --panel:rgba(16,22,48,.72); --ink:#e8ecff; --muted:#8b93c8;
@@ -101,6 +103,32 @@
   @media(max-width:900px){.mapticker{position:static;width:auto;margin-top:10px;pointer-events:auto}}
   .map-src{margin-top:8px;font-size:11px;color:var(--muted)}
   .map-src b{color:var(--green)}
+
+  /* ===== 真实传播数据面板 ===== */
+  .reality-note{font-size:11.5px;color:var(--muted);line-height:1.9;margin-bottom:14px;
+    border-left:3px solid var(--green);padding-left:12px}
+  .reality-note b{color:var(--green)}
+  .reality-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:18px}
+  .reality-kpi{background:rgba(5,7,26,.62);border:1px solid var(--line);border-radius:14px;padding:13px 15px;position:relative;overflow:hidden}
+  .reality-kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,var(--green),transparent);animation:scanline 3.4s linear infinite}
+  .reality-kpi .k{font-size:11px;color:var(--muted)}
+  .reality-kpi .n{font-size:25px;font-weight:900;color:var(--frog1);font-family:Consolas,monospace;
+    font-variant-numeric:tabular-nums;margin:3px 0;text-shadow:0 0 16px rgba(255,217,77,.4)}
+  .reality-kpi .l{font-size:10.5px;color:var(--muted)}
+  .reality-kpi.hi{border-color:rgba(255,217,77,.5);background:linear-gradient(135deg,rgba(255,217,77,.12),rgba(255,110,199,.06))}
+  .reality-sub{font-size:12px;color:var(--ink);font-weight:700;margin-bottom:10px}
+  .bar-list{display:flex;flex-direction:column;gap:7px}
+  .blrow{display:flex;align-items:center;gap:10px;font-size:12px}
+  .blrow .bln{width:74px;flex-shrink:0;color:var(--ink)}
+  .blrow .blbar{flex:1;height:13px;background:rgba(42,58,106,.42);border-radius:7px;overflow:hidden}
+  .blrow .blbar i{display:block;height:100%;border-radius:7px;
+    background:linear-gradient(90deg,#1b7fa8,#22d3ee,#7ec850,#ffd94d);
+    box-shadow:0 0 10px rgba(34,211,238,.45);transition:width .9s cubic-bezier(.2,.8,.3,1)}
+  .blrow .blv{width:60px;text-align:right;flex-shrink:0;color:var(--frog1);font-weight:800;font-variant-numeric:tabular-nums}
+  .blrow .blw{width:104px;text-align:right;flex-shrink:0;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+  .blcaveat{margin-top:12px;font-size:10.5px;color:var(--muted);line-height:1.9;
+    border-top:1px dashed rgba(42,58,106,.7);padding-top:10px}
   #trend{height:260px;width:100%}
   #pie{height:300px;width:100%}
 
@@ -270,9 +298,18 @@
     </div>
   </div>
 
+  <!-- ================= 真实流量数据（Wikimedia 官方 API） ================= -->
+  <div class="card" id="realityCard" style="display:none">
+    <h2>📡 真实传播数据 <span class="tag">Wikimedia 官方 API · 真实测得</span></h2>
+    <p class="reality-note" id="realityNote"></p>
+    <div class="reality-kpis" id="realityKpis"></div>
+    <div class="reality-sub">🌍 按维基百科语言版本的真实访问权重（这也是地图热力值的来源）</div>
+    <div class="bar-list" id="realityBars"></div>
+  </div>
+
   <div class="grid">
     <div class="card">
-      <h2>📈 24 小时使用频率趋势 <span class="tag sim">模拟推演</span></h2>
+      <h2 id="trendTitle">📈 24 小时使用频率趋势 <span class="tag sim">模拟推演</span></h2>
       <div id="trend"></div>
     </div>
     <div class="card">
@@ -448,6 +485,88 @@ const baseData={};
 countries.forEach((c,i)=>{
   baseData[c]=Math.round(GLOBAL_TOTAL*pct[i]/100*(0.94+Math.random()*0.12));
 });
+
+/* ================= 真实数据接入（tools/naiwa_pageviews.py 产出） =================
+   如果 assets/naiwa-data/naiwa-reality.js 存在，地图热力值就改用
+   维基百科「各语言版本真实访问量」当权重，而不是手写的百分比。
+   没有这个文件时自动退回推演数据，页面不会坏。 */
+const REAL = (typeof NAIWA_REALITY!=="undefined") ? NAIWA_REALITY : null;
+if(REAL){
+  /* 1) 用真实的「分国家访问量」覆盖推演占比
+     —— 直接采用真实比例，不再人为压缩，因为这就是实测结果 */
+  const wmap={};
+  (REAL.regionShare||[]).forEach(r=>{if(r.views>0)wmap[r.region]=r.views;});
+  const hit=countries.map(c=>wmap[c]).filter(v=>v>0);
+  if(hit.length>=3){
+    const sum=hit.reduce((a,b)=>a+b,0)||1;
+    const miss=[];
+    countries.forEach((c,i)=>{
+      if(wmap[c]>0){
+        pct[i]=wmap[c]/sum*100;
+      }else{
+        /* 没有真实数据的国家：给一个很小的残值，不参与主要分布 */
+        pct[i]=0.02;
+        miss.push(c);
+      }
+    });
+    /* 把量级缩放到全球总量 */
+    countries.forEach((c,i)=>{ baseData[c]=Math.max(1,Math.round(GLOBAL_TOTAL*pct[i]/100)); });
+    REAL.__missCountries=miss;
+    REAL.__realApplied=true;
+  }
+  /* 2) 渲染真实数据面板 + 用真实月度趋势替换模拟趋势曲线 */
+  window.__NAIWA_REALITY_READY=function(){
+    const card=document.getElementById("realityCard");
+    const kpis=document.getElementById("realityKpis");
+    const bars=document.getElementById("realityBars");
+    const note=document.getElementById("realityNote");
+    if(!card||!kpis)return;
+    const peak=REAL.peak, art=REAL.trendArticle||"奶龙";
+    const totalArt=REAL.articleTotal||0;
+    const months=(REAL.trend||[]).length;
+    const growth=(REAL.trend&&REAL.trend.length>1&&REAL.trend[0].views>0)
+      ? Math.round((REAL.trend[REAL.trend.length-1].views/REAL.trend[0].views-1)*100) : 0;
+    const maxShare=Math.max(...(REAL.regionShare||[{share:1}]).map(r=>r.share));
+    const maxWeight=Math.max(...(REAL.regionShare||[{views:1}]).map(r=>r.views||0),1);
+
+    kpis.innerHTML=
+      `<div class="reality-kpi"><div class="k">真实月度访问趋势</div><div class="n">${months}</div><div class="l">个月连续真实记录</div></div>`+
+      `<div class="reality-kpi"><div class="k">条目「${art}」累计</div><div class="n">${fmt(totalArt)}</div><div class="l">维基百科真实访问量</div></div>`+
+      `<div class="reality-kpi hi"><div class="k">峰值月份</div><div class="n">${peak?peak.month:"—"}</div><div class="l">${peak?fmt(peak.views)+" 次浏览":"无数据"}</div></div>`+
+      `<div class="reality-kpi"><div class="k">区间增长</div><div class="n" style="color:${growth>=0?"#7ec850":"#ff5a5a"}">${growth>=0?"+":""}${growth}%</div><div class="l">首月 → 末月真实对比</div></div>`;
+
+    note.innerHTML="📚 <b>数据来源</b>：Wikimedia Pageviews API（官方开放接口，无需密钥）· "
+      +`统计条目：${art}（奶蛙的共同源头）· 区间 ${REAL.period.start.slice(0,4)}-${REAL.period.start.slice(4,6)} → ${REAL.period.end.slice(0,4)}-${REAL.period.end.slice(4,6)} · `
+      +`生成于 ${new Date(REAL.generatedAt).toLocaleString("zh-CN")}`;
+
+    bars.innerHTML=(REAL.regionShare||[]).slice(0,12).map(r=>
+      `<div class="blrow">
+        <span class="bln">${r.region}</span>
+        <span class="blbar"><i style="width:${((r.views||0)/maxWeight*100).toFixed(1)}%"></i></span>
+        <span class="blv">${(r.share||0).toFixed(2)}%</span>
+        <span class="blw">${fmt(r.views||0)}</span>
+      </div>`).join("")
+      +`<div class="blcaveat">${(REAL.caveats||[]).map(c=>"· "+c).join("<br>")}`
+      +`<br>· <b style="color:#ff8a3c">重要提醒</b>：维基百科在中国大陆无法直接访问，`
+      +`所以「中国」在分国家数据里是被显著低估的。这也是为什么上面这份榜单看起来偏欧美。`
+      +`奶蛙的实际传播主阵地是中国大陆的短视频平台，那部分流量不在 Wikimedia 的统计范围内。`
+      +(REAL.__missCountries&&REAL.__missCountries.length
+        ? `<br>· 本次有 <b>${REAL.__missCountries.length}</b> 个地区没有真实数据，图上只给了极小的残值：`
+          +REAL.__missCountries.slice(0,10).join("、")+(REAL.__missCountries.length>10?" 等":"")
+        : "")
+      +`</div>`;
+
+    card.style.display="block";
+    window.__NAIWA_REALITY=REAL;
+    /* 地图来源说明也标注真实数据 */
+    const srcEl=document.getElementById("mapSrc");
+    if(srcEl&&REAL.__realApplied&&srcEl.innerHTML.indexOf("\u771f\u5b9e\u6570\u636e")<0){
+      srcEl.innerHTML='<b style="color:#7ec850">\u2713 \u70ed\u529b\u503c\u5df2\u5207\u6362\u4e3a\u771f\u5b9e\u6570\u636e</b>\uff08Wikimedia \u5206\u56fd\u5bb6\u8bbf\u95ee\u91cf\uff09\u00b7 '+srcEl.innerHTML;
+    }
+  };
+}
+
+/* ================= 模拟推演引擎（已明确标注） ================= */
 /* 传播路径分层：①中国→东亚/东南亚（抖音海外+文化圈）②中国→欧美华人圈 ③中国→全球 */
 const ROUTES=[
   {to:"日本",tier:1},{to:"韩国",tier:1},{to:"新加坡",tier:1},{to:"马来西亚",tier:1},{to:"泰国",tier:1},{to:"越南",tier:1},
@@ -459,7 +578,7 @@ const ROUTES=[
 const TIER_COLOR={1:"#ffd94d",2:"#22d3ee",3:"#ff6ec7"};
 const acts=["在评论区发出奶蛙「齁齁齁」","转发了黄色三幻神合体帖","在弹幕里刷了奶蛙语录","把奶蛙设为群表情置顶","转发了奶蛙鬼畜二创","用奶蛙回应了工作群消息","收藏了奶蛙高清原图","给奶蛙梗图点了赞","用奶蛙回复了「容我三思」","在奶龙官方评论区发奶蛙（勇）"];
 function maskIP(){return `${1+Math.floor(Math.random()*223)}.${Math.floor(Math.random()*256)}.${Math.floor(Math.random()*256)}.*`;}
-/* 按真实占比加权抽样——中国约七成，海外华人圈次之 */
+/* 按真实占比加权抽样（有真实数据时，比重就是实测值） */
 function randCountry(){
   const r=Math.random()*100;let acc=0;
   for(let i=0;i<countries.length;i++){acc+=pct[i];if(r<=acc)return countries[i];}
@@ -752,7 +871,8 @@ trendChart.setOption({
     areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:"rgba(34,211,238,.35)"},{offset:1,color:"rgba(34,211,238,0)"}])}
   }]
 });
-setInterval(()=>{const nv=Math.max(100,vals[23]+Math.floor(Math.random()*31)-15);vals.shift();vals.push(nv);trendChart.setOption({series:[{data:vals}]});},3000);
+/* 模拟趋势的自动跳动：有真实数据时会被下面的接入代码停掉 */
+window.__trendTimer=setInterval(()=>{const nv=Math.max(100,vals[23]+Math.floor(Math.random()*31)-15);vals.shift();vals.push(nv);trendChart.setOption({series:[{data:vals}]});},3000);
 
 /* ================= 场景饼图（按真实传播形态归类） ================= */
 const pieChart=echarts.init(document.getElementById("pie"));
@@ -873,6 +993,41 @@ ticketBtn.addEventListener("click",()=>{
   ticketArea.innerHTML=html;
 });
 window.addEventListener("resize",()=>{mapChart.resize();trendChart.resize();pieChart.resize();});
+
+/* ================= 真实数据接入：渲染面板 + 替换趋势曲线 ================= */
+(function(){
+  if(typeof window.__NAIWA_REALITY_READY==="function"){
+    try{ window.__NAIWA_REALITY_READY(); }catch(e){ console.warn("真实数据面板渲染失败",e); }
+  }
+  const R=window.__NAIWA_REALITY;
+  if(!R||!R.trend||R.trend.length<3) return;
+  /* 用真实月度访问量替换模拟的 24 小时曲线 */
+  const tEl=document.getElementById("trendTitle");
+  if(tEl){
+    tEl.innerHTML='📈 条目「'+(R.trendArticle||"奶龙")+'」真实月度访问量 <span class="tag" style="color:#7ec850;border-color:rgba(126,200,80,.4)">Wikimedia 真实数据</span>';
+  }
+  const months=R.trend.map(t=>t.month.slice(2).replace("-","/"));
+  const views=R.trend.map(t=>t.views);
+  trendChart.setOption({
+    tooltip:{trigger:"axis",backgroundColor:"#101630",borderColor:"#2a3a6a",textStyle:{color:"#e8ecff"},
+      formatter:p=>`${p[0].axisValue}<br>真实访问量：<b style="color:#ffd94d">${p[0].data.toLocaleString()}</b> 次`},
+    xAxis:{type:"category",data:months,boundaryGap:false,axisLabel:{color:"#8b93c8",fontSize:10},
+      axisLine:{lineStyle:{color:"#2a3a6a"}}},
+    yAxis:{type:"value",axisLabel:{color:"#8b93c8"},splitLine:{lineStyle:{color:"rgba(42,58,106,.4)"}}},
+    series:[{
+      name:"真实访问量",type:"line",smooth:true,data:views,symbol:"circle",symbolSize:6,
+      itemStyle:{color:"#7ec850",borderColor:"#05071a",borderWidth:1.5},
+      lineStyle:{width:3,color:"#7ec850",shadowBlur:14,shadowColor:"rgba(126,200,80,.8)"},
+      areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[
+        {offset:0,color:"rgba(126,200,80,.42)"},{offset:1,color:"rgba(126,200,80,0)"}])},
+      markPoint:{symbolSize:44,data:[{type:"max",name:"峰值"}],
+        itemStyle:{color:"rgba(255,77,79,.85)"},label:{color:"#fff",fontSize:10}}
+    }]
+  });
+  /* 峰值月做成一个真数据卡片，替换掉原趋势图的随机跳动 */
+  clearInterval(window.__trendTimer);
+  NAIWA.toast("📡 已载入 Wikimedia 真实传播数据", "#7ec850");
+})();
 </script>
 <script src="naiwa-common.js"></script>
 </body>
