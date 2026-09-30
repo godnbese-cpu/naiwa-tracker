@@ -83,6 +83,22 @@
   .card h2 .tag{font-size:11px;color:var(--cyan);border:1px solid rgba(34,211,238,.35);border-radius:20px;padding:2px 10px;font-weight:normal}
   .card h2 .tag.sim{color:var(--muted);border-color:rgba(139,147,200,.35)}
   #map{height:480px;width:100%;border-radius:12px}
+  .mapwrap{position:relative}
+  .mapticker{
+    position:absolute;right:12px;top:12px;z-index:9;width:224px;
+    background:rgba(5,7,26,.82);backdrop-filter:blur(9px);
+    border:1px solid var(--line);border-radius:14px;padding:11px 12px 9px;
+    box-shadow:0 10px 34px rgba(0,0,0,.5);pointer-events:none;
+  }
+  .mapticker .mth{font-size:11.5px;font-weight:800;color:var(--frog1);letter-spacing:1px;margin-bottom:8px}
+  .mapticker .mtf{font-size:10px;color:var(--muted);margin-top:8px;padding-top:7px;border-top:1px dashed rgba(42,58,106,.7)}
+  .tkrow{display:flex;align-items:center;gap:6px;font-size:11.5px;margin-bottom:6px}
+  .tkrow .tko{width:18px;text-align:center;flex-shrink:0;font-size:11px}
+  .tkrow .tkn{width:52px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+  .tkrow .tkbar{flex:1;height:7px;background:rgba(42,58,106,.45);border-radius:4px;overflow:hidden}
+  .tkrow .tkbar i{display:block;height:100%;border-radius:4px;transition:width .7s cubic-bezier(.2,.8,.3,1);box-shadow:0 0 8px rgba(255,217,77,.4)}
+  .tkrow .tkv{width:46px;text-align:right;flex-shrink:0;color:var(--frog1);font-weight:700;font-variant-numeric:tabular-nums}
+  @media(max-width:900px){.mapticker{position:static;width:auto;margin-top:10px;pointer-events:auto}}
   .map-src{margin-top:8px;font-size:11px;color:var(--muted)}
   .map-src b{color:var(--green)}
   #trend{height:260px;width:100%}
@@ -238,7 +254,14 @@
   <div class="grid">
     <div class="card" id="mapsec">
       <h2>🌍 奶蛙全球传播光络图 <span class="tag sim">传播路径推演 · 模拟数据</span></h2>
-      <div id="map"></div>
+      <div class="mapwrap">
+        <div id="map"></div>
+        <div class="mapticker">
+          <div class="mth">🏆 实时出现频率 TOP 6</div>
+          <div id="mapTicker"></div>
+          <div class="mtf">🖱️ 滚轮缩放 · 拖拽平移 · 点击国家高亮</div>
+        </div>
+      </div>
       <div class="map-src" id="mapSrc">地图数据加载中…</div>
     </div>
     <div class="card">
@@ -462,13 +485,61 @@ function pushFeed(){
 for(let i=0;i<10;i++)pushFeed();
 setInterval(pushFeed,900);
 
-/* ================= 全球光络图（本地数据优先，多源容错） ================= */
+/* ================= 全球光络图（真实地图热力 + 频次气泡 + 传播弧线） ================= */
 const mapChart=echarts.init(document.getElementById("map"));
 const GEO_SOURCES=[
   {url:"world.json",label:"本地文件（同源加载，零外部依赖）"},
   {url:"https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/json/world.json",label:"jsdelivr CDN 备用"},
   {url:"https://unpkg.com/echarts@4.9.0/map/json/world.json",label:"unpkg CDN 备用"}
 ];
+
+/* 中文名 → GeoJSON 里的英文名（用于地图着色与定位） */
+const NAME_MAP={
+  "中国":"China","美国":"United States","日本":"Japan","韩国":"Korea","印度":"India",
+  "泰国":"Thailand","越南":"Vietnam","马来西亚":"Malaysia","新加坡":"Singapore",
+  "印度尼西亚":"Indonesia","菲律宾":"Philippines","英国":"United Kingdom","法国":"France",
+  "德国":"Germany","意大利":"Italy","西班牙":"Spain","俄罗斯":"Russia","加拿大":"Canada",
+  "巴西":"Brazil","澳大利亚":"Australia","埃及":"Egypt","南非":"South Africa",
+  "墨西哥":"Mexico","土耳其":"Turkey","沙特阿拉伯":"Saudi Arabia","新西兰":"New Zealand",
+  "荷兰":"Netherlands","瑞典":"Sweden","波兰":"Poland","阿根廷":"Argentina"
+};
+const EN2ZH={};Object.keys(NAME_MAP).forEach(k=>EN2ZH[NAME_MAP[k]]=k);
+
+/* 各频次档位的配色（低 → 高） */
+const HEAT_STOPS=["#0d1b3e","#12406b","#1b7fa8","#22d3ee","#7ec850","#ffd94d","#ff8a3c","#ff4d4f"];
+
+/* 从 GeoJSON 里算出每个国家多边形的「视觉中心」，不再手写坐标 */
+function ringCentroid(ring){
+  /* 用面积加权重心，避免海外领地/长条国家把点拖偏 */
+  let a=0,cx=0,cy=0;
+  for(let i=0,n=ring.length-1;i<n;i++){
+    const x1=ring[i][0],y1=ring[i][1],x2=ring[i+1][0],y2=ring[i+1][1];
+    const cross=x1*y2-x2*y1;
+    a+=cross;cx+=(x1+x2)*cross;cy+=(y1+y2)*cross;
+  }
+  if(Math.abs(a)<1e-9){ /* 退化时退回平均 */
+    let sx=0,sy=0;ring.forEach(p=>{sx+=p[0];sy+=p[1];});
+    return [sx/ring.length,sy/ring.length];
+  }
+  a*=0.5;
+  return [cx/(6*a),cy/(6*a)];
+}
+function featureCentroid(f){
+  const polys=f.geometry.type==="Polygon"?[f.geometry.coordinates]:f.geometry.coordinates;
+  let best=null,bestArea=0;
+  polys.forEach(poly=>{
+    const outer=poly[0];
+    let a=0;
+    for(let i=0,n=outer.length-1;i<n;i++)a+=outer[i][0]*outer[i+1][1]-outer[i+1][0]*outer[i][1];
+    a=Math.abs(a/2);
+    if(a>bestArea){bestArea=a;best=outer;}
+  });
+  return best?ringCentroid(best):null;
+}
+
+/* 坐标：优先用 GeoJSON 算出来的，算不到才用手写表兜底 */
+const pos={};
+
 (async function(){
   let geo=null,usedLabel="";
   for(const src of GEO_SOURCES){
@@ -479,39 +550,191 @@ const GEO_SOURCES=[
   }
   const srcEl=document.getElementById("mapSrc");
   if(!geo){srcEl.innerHTML="❌ 所有地图源均加载失败，请刷新重试";return;}
-  srcEl.innerHTML=`<b>✓ 地图数据已加载</b>：${usedLabel} · <span style="color:#ffd94d">黄色=东亚/东南亚</span> · <span style="color:#22d3ee">青色=欧美华人圈</span> · <span style="color:#ff6ec7">粉色=全球扩散</span>`;
+
+  /* 1) 算出所有国家的中心点 */
+  let autoCount=0;
+  geo.features.forEach(f=>{
+    const en=f.properties&&f.properties.name;
+    if(!en)return;
+    const c=featureCentroid(f);
+    if(c&&isFinite(c[0])&&isFinite(c[1])){pos[en]=c;autoCount++;}
+  });
+  /* 2) 补齐手写表里有的（GeoJSON 里叫法不同时兜底） */
+  countries.forEach(c=>{
+    const en=NAME_MAP[c];
+    if(en&&!pos[en]&&coords[c])pos[en]=coords[c];
+  });
+
+  srcEl.innerHTML=`<b>✓ 地图已加载</b>：${usedLabel} · 由 GeoJSON 自动定位 <b>${autoCount}</b> 个国家中心<br>`
+    +`<span style="color:#ff4d4f">红/橙=高频</span> · <span style="color:#ffd94d">黄=中频</span> · `
+    +`<span style="color:#22d3ee">青=低频</span> · <span style="color:#0d1b3e">深蓝=极低</span>`
+    +` · 弧线粗细/颜色 = 传播强度（黄=东亚圈，青=欧美华人圈，粉=全球扩散）`;
+
   echarts.registerMap("world",geo);
-  /* 按传播层级生成线条 */
+
+  /* 3) 地图热力数据（英文名 → 频次）。maxVal 随数据变化，气泡半径才能跟着动 */
+  let maxVal=Math.max(...Object.values(baseData));
+  const sorted=[...countries].sort((a,b)=>baseData[b]-baseData[a]);
+
+  /* 生成两组数据：地图区块 + 频次气泡（每 3 秒整体重算一次） */
+  function buildMapData(){
+    return countries.map(c=>({name:NAME_MAP[c]||c,value:baseData[c]}));
+  }
+  /* 4) 频次气泡：位置由 GeoJSON 自动算出，大小按频次开方 */
+  function buildBubbles(){
+    return countries.map(c=>{
+      const en=NAME_MAP[c]||c;
+      const p=pos[en];
+      if(!p)return null;
+      return {name:c,en:en,value:[p[0],p[1],baseData[c]]};
+    }).filter(Boolean);
+  }
+  const heatData=buildMapData();
+  const scatterData=buildBubbles();
+
+  /* 5) 传播弧线：起点终点都从自动定位里取 */
   const tierLines=[1,2,3].map(t=>
-    ROUTES.filter(r=>r.tier===t).map(r=>({coords:[coords["中国"],coords[r.to]]}))
+    ROUTES.filter(r=>r.tier===t).map(r=>{
+      const a=pos[NAME_MAP["中国"]]||coords["中国"];
+      const b=pos[NAME_MAP[r.to]]||coords[r.to];
+      return b?{coords:[a,b],value:baseData[r.to]}:null;
+    }).filter(Boolean)
   );
+
   mapChart.setOption({
     backgroundColor:"transparent",
-    tooltip:{formatter:p=>p.seriesType==="effectScatter"?`${p.name}：${fmt(baseData[p.name])} 次/日（推演 · 占${(pct[countries.indexOf(p.name)]||0).toFixed(1)}%）`:"奶蛙传播之光"},
+    tooltip:{
+      backgroundColor:"rgba(8,12,34,.95)",
+      borderColor:"#2a3a6a",
+      textStyle:{color:"#e8ecff",fontSize:12},
+      formatter:p=>{
+        /* 气泡 */
+        if(p.seriesType==="effectScatter"){
+          const i=countries.indexOf(p.name);
+          return `<b style="color:${p.color}">${p.name}</b>　${NAME_MAP[p.name]||""}<br>`
+            +`单日出现次数：<b style="color:#ffd94d">${fmt(baseData[p.name])}</b> 次<br>`
+            +`全球占比：<b>${(pct[i]||0).toFixed(1)}%</b><br>`
+            +`<span style="color:#8b93c8;font-size:11px">推演数据 · 越靠前的国家越早被奶蛙攻陷</span>`;
+        }
+        /* 地图区块 */
+        if(p.seriesType==="map"){
+          const zh=EN2ZH[p.name]||p.name;
+          const v=baseData[zh];
+          if(v===undefined)return `<b>${zh}</b><br><span style="color:#8b93c8">暂无观测数据</span>`;
+          return `<b style="color:#ffd94d">${zh}</b>　${p.name}<br>单日出现次数：<b>${fmt(v)}</b> 次<br>全球占比：<b>${(pct[countries.indexOf(zh)]||0).toFixed(1)}%</b>`;
+        }
+        return "奶蛙传播之光";
+      }
+    },
+    /* 频次颜色标尺 */
+    visualMap:{
+      type:"continuous",min:0,max:maxVal,
+      left:12,bottom:56,calculable:true,
+      itemWidth:11,itemHeight:132,
+      text:["高频","低频"],
+      textStyle:{color:"#8b93c8",fontSize:10},
+      inRange:{color:HEAT_STOPS},
+      formatter:v=>fmt(Math.round(v))
+    },
     geo:{
-      map:"world",roam:true,zoom:1.2,scaleLimit:{min:0.8,max:8},
-      itemStyle:{areaColor:"#0b1430",borderColor:"#2a3a6a",borderWidth:0.6,shadowColor:"rgba(34,211,238,.25)",shadowBlur:6},
-      emphasis:{label:{show:false},itemStyle:{areaColor:"#1a2a55"}}
+      map:"world",roam:true,zoom:1.15,scaleLimit:{min:0.8,max:9},
+      layoutCenter:["50%","52%"],layoutSize:"112%",
+      itemStyle:{
+        areaColor:"#0d1b3e",borderColor:"#2a3a6a",borderWidth:0.7,
+        shadowColor:"rgba(34,211,238,.35)",shadowBlur:10
+      },
+      emphasis:{
+        label:{show:true,color:"#fff",fontSize:11},
+        itemStyle:{areaColor:"#1e3a7a",borderColor:"#ffd94d",borderWidth:1.4,shadowColor:"#ffd94d",shadowBlur:18}
+      },
+      select:{itemStyle:{areaColor:"#ffd94d"},label:{show:false}}
     },
     series:[
+      /* ① 地图热力：按频次给国家上色 */
       {
-        type:"effectScatter",coordinateSystem:"geo",zlevel:2,
-        symbolSize:val=>10+Math.sqrt(val[2])/GLOBAL_TOTAL*90000,
-        rippleEffect:{brushType:"stroke",scale:3.4,period:4},
-        itemStyle:{color:"#ffd94d",shadowBlur:12,shadowColor:"#ffd94d"},
-        label:{show:true,formatter:"{b}",position:"right",color:"#8b93c8",fontSize:10},
-        encode:{value:2},
-        data:countries.map(c=>({name:c,value:[...coords[c],baseData[c]]}))
+        type:"map",map:"world",geoIndex:0,zlevel:1,
+        nameMap:NAME_MAP,
+        data:heatData,
+        label:{show:false},
+        emphasis:{label:{show:true}}
       },
+      /* ② 频次气泡：位置自动，大小按频次开方 */
+      {
+        type:"effectScatter",coordinateSystem:"geo",zlevel:3,
+        symbolSize:val=>6+Math.sqrt(val[2]/maxVal)*46,
+        rippleEffect:{brushType:"stroke",scale:3.8,period:4.2},
+        itemStyle:{
+          color:p=>{
+            const r=(baseData[p.name]||0)/maxVal;
+            return r>0.5?"#ff4d4f":r>0.12?"#ffd94d":r>0.02?"#22d3ee":"#7ec850";
+          },
+          shadowBlur:16,shadowColor:"rgba(255,217,77,.85)"
+        },
+        label:{
+          show:true,position:"right",color:"#c9d2ff",fontSize:10,
+          formatter:p=>baseData[p.name]/maxVal>0.05?p.name:"",
+          textBorderColor:"rgba(5,7,26,.9)",textBorderWidth:2
+        },
+        encode:{value:2},
+        data:scatterData
+      },
+      /* ③ 传播弧线：三层不同强度 */
       ...[1,2,3].map(t=>({
-        type:"lines",coordinateSystem:"geo",zlevel:4-t,
-        effect:{show:true,period:3+t,trailLength:0.4+t*0.1,symbol:"arrow",symbolSize:5+t,color:TIER_COLOR[t]},
-        lineStyle:{color:TIER_COLOR[t],width:2.2-t*0.4,opacity:0.55-t*0.1,curveness:0.25+t*0.05},
-        data:tierLines[t-1]
+        type:"lines",coordinateSystem:"geo",zlevel:5-t,
+        effect:{show:true,period:2.6+t*0.8,trailLength:0.45+t*0.12,symbol:"arrow",symbolSize:5+t*2,color:TIER_COLOR[t]},
+        lineStyle:{color:TIER_COLOR[t],width:2.6-t*0.5,opacity:0.6-t*0.12,curveness:0.24+t*0.06},
+        data:tierLines[t-1],
+        silent:true
       }))
     ]
   });
+  /* 地图点击 → 高亮该国 */
+  mapChart.on("click",p=>{if(p.name&&baseData[EN2ZH[p.name]])flashMapCountry(EN2ZH[p.name]);});
+
+  /* ============ 地图旁的实时排行榜（前 6） ============ */
+  const ticker=document.getElementById("mapTicker");
+  let tickIdx=0;
+  function renderTicker(){
+    const top=sorted.slice(0,6);
+    ticker.innerHTML=top.map((c,i)=>{
+      const v=baseData[c],w=v/maxVal*100;
+      const order=i+1;
+      const medal=order===1?"🥇":order===2?"🥈":order===3?"🥉":"&nbsp;"+order;
+      return `<div class="tkrow">
+        <span class="tko">${medal}</span>
+        <span class="tkn">${c}</span>
+        <span class="tkbar"><i style="width:${w}%;background:linear-gradient(90deg,${HEAT_STOPS[2]},${order<=2?"#ff4d4f":order<=4?"#ffd94d":"#22d3ee"})"></i></span>
+        <span class="tkv">${fmt(v)}</span>
+      </div>`;
+    }).join("");
+  }
+  renderTicker();
+  /* 数据每 3 秒微微浮动：地图着色 + 气泡大小 + 排行榜一起刷新 */
+  setInterval(()=>{
+    countries.forEach(c=>{
+      baseData[c]=Math.max(1000,Math.round(baseData[c]*(0.985+Math.random()*0.03)));
+    });
+    const vals=Object.values(baseData);
+    maxVal=Math.max(...vals);
+    sorted.sort((a,b)=>baseData[b]-baseData[a]);
+    mapChart.setOption({
+      visualMap:{max:maxVal},
+      series:[
+        {data:buildMapData()},
+        {data:buildBubbles()}
+      ]
+    });
+    renderTicker();
+  },3000);
+
+  /* 点击国家时的高亮动画 */
+  function flashMapCountry(zh){
+    const en=NAME_MAP[zh];if(!en)return;
+    mapChart.dispatchAction({type:"highlight",seriesIndex:0,name:en});
+    setTimeout(()=>mapChart.dispatchAction({type:"downplay",seriesIndex:0,name:en}),900);
+  }
 })();
+
 
 /* ================= 趋势图 ================= */
 const trendChart=echarts.init(document.getElementById("trend"));

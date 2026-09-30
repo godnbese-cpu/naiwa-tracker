@@ -463,23 +463,60 @@ function makeEnt(id, side, def) {
     chainIdx: 0, chainT: 0, counter: null, buff: 0,
     slow: 0, burn: 0, drainFx: 0, trail: [], flashT: 0,
     ai: { t: 0, plan: "approach", hold: 0 }, hitFlash: 0, pushOut: 0,
+    landSquash: 0, hitSquash: 0,
     anim: { lean: 0, scale: 1, rot: 0, yOff: 0 }
   };
 }
 var P = [null, null], projectiles = [], particles = [], floaters = [], afterimages = [], rings = [];
 
 /* ---------------- 缓存精灵 ---------------- */
+/* 按「角色 + 实际像素尺寸」缓存。尺寸取整能大幅提高命中率，
+   否则每个角色都要按 96/104/111… 生成好几份。 */
 var sprites = {};
 function buildSprites() {
+  /* 预热 12 位斗士在「标准体型」下的立绘，选人界面直接复用，避免占位图 */
   F.list.forEach(function (f) {
+    var size = f.boss ? 120 : Math.round(96 * ((f.weight || 1) * 0.55 + 0.45));
+    var opt = { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: size };
     sprites[f.id] = {
-      idle: NAIWA.tintSprite(f.src, f.color, { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, stroke: NAIWA.rgba(f.color, .9), size: 256 }),
-      atk: NAIWA.tintSprite(f.atkSrc, f.color, { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, stroke: NAIWA.rgba(f.accent, .9), size: 256 }),
-      sad: NAIWA.tintSprite(f.sadSrc, f.color, { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: 256 }),
+      size: {},
       icon: NAIWA.tintSprite(f.src, f.color, { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: 128 })
+    };
+    sprites[f.id].size[size] = {
+      idle: NAIWA.tintSprite(f.src, f.color, opt),
+      atk: NAIWA.tintSprite(f.atkSrc, f.accent, opt),
+      wind: NAIWA.tintSprite(f.sadSrc, f.color, opt),
+      hurt: NAIWA.tintSprite(f.sadSrc, f.color, opt),
+      rimAtk: NAIWA.tintSprite(f.atkSrc, f.glow || f.color, { hue: f.hue || 0, sat: f.sat || 1, size: size, alpha: .95, stroke: NAIWA.rgba(f.accent, 1) }),
+      rim: NAIWA.tintSprite(f.src, f.glow || f.color, { hue: f.hue || 0, sat: f.sat || 1, size: size, alpha: .9, stroke: NAIWA.rgba(f.color, 1) })
     };
   });
 }
+function sprFor(e) {
+  var f = e.def, w = Math.max(32, Math.round(e.w));
+  var bucket = sprites[f.id] = sprites[f.id] || { size: {} };
+  var hit = bucket.size[w];
+  if (hit) return hit;
+  var opt = { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: w };
+  var set = {
+    idle: NAIWA.tintSprite(f.src, f.color, opt),
+    atk:  NAIWA.tintSprite(f.src, f.accent, opt),
+    /* 预备/收招用的中间姿态，让动作有「起—爆—收」的层次 */
+    wind: NAIWA.tintSprite(f.thinkSrc || f.sadSrc || f.src, f.color, opt),
+    hurt: NAIWA.tintSprite(f.sadSrc, f.color, opt),
+    /* 高光轮廓：用于攻击瞬间的体积感与能量感 */
+    rimAtk: NAIWA.tintSprite(f.atkSrc, f.glow || f.color, {
+      hue: f.hue || 0, sat: f.sat || 1, size: w, alpha: .95, stroke: NAIWA.rgba(f.accent, 1)
+    }),
+    rim: NAIWA.tintSprite(f.src, f.glow || f.color, {
+      hue: f.hue || 0, sat: f.sat || 1, size: w, alpha: .9, stroke: NAIWA.rgba(f.color, 1)
+    })
+  };
+  bucket.size[w] = set;
+  return set;
+}
+/* 头顶读条背景色，避免每帧拼字符串 */
+function rgba(hex, a) { return NAIWA.rgba(hex, a); }
 
 /* ---------------- 粒子 / 特效 ---------------- */
 function burst(x, y, color, n, spd) {
@@ -605,6 +642,7 @@ function resolveHit(att, def, m, cx, cy, isCounter, dmg) {
   dmg = dmg || m.dmg;
   def.hp = Math.max(0, def.hp - dmg);
   def.hitFlash = 8;
+  def.hitSquash = NAIWA.clamp(.5 + dmg / 20, .5, 1.3);   // 受击压扁
   var knockMul = isCounter ? 1.35 : 1;
   def.vx += att.face * m.knock * knockMul * (1 / (def.def.weight || 1));
   if (m.pop) def.vy += m.pop * knockMul;
@@ -632,6 +670,9 @@ function resolveHit(att, def, m, cx, cy, isCounter, dmg) {
   state.slow = Math.max(state.slow, heavy ? .12 : 0);
   burst(cx, cy, heavy ? "#ff5a5a" : "#ffd94d", heavy ? 22 : 12, heavy ? 380 : 240);
   ring(cx, cy, heavy ? "#ff5a5a" : "#ffd94d", 4, heavy ? 80 : 50, .28, heavy ? 6 : 3);
+  /* 能量光斑：从命中点朝攻击方向射出 */
+  addStreaks(cx, cy, att.face, heavy ? "#ffd94d" : att.def.accent, heavy ? 10 : 6);
+  addStreaks(cx, cy, -att.face, "#ffffff", 3);
   floatText(cx, cy - 18, "-" + dmg, heavy ? "#ff5a5a" : "#ffd94d", heavy ? 30 : 22);
   if (heavy) NAIWA.audio.hitHeavy(); else NAIWA.audio.hitLight();
 
@@ -752,10 +793,20 @@ function update() {
     if (Math.abs(e.vx) < .06) e.vx = 0;
 
     if (e.y >= GROUND) {
-      if (!e.onGround && e.vy > 6) { burst(e.x, GROUND, "#8b93c8", 8, 150); }
+      if (!e.onGround) {
+        if (e.vy > 6) {
+          burst(e.x, GROUND, "#8b93c8", 8, 150);
+          e.landSquash = NAIWA.clamp(e.vy / 18, .25, 1);   // 落地压扁
+        } else if (e.vy > 1) {
+          e.landSquash = .3;
+        }
+        e.onGround = true; e.jumps = 0;
+      }
       e.y = GROUND; e.vy = 0;
-      if (!e.onGround) { e.onGround = true; e.jumps = 0; }
     } else { e.onGround = false; }
+    /* 压缩拉伸的弹性回落 */
+    e.landSquash = Math.max(0, e.landSquash - .09);
+    e.hitSquash = Math.max(0, e.hitSquash - .11);
 
     /* 墙 */
     if (e.x < WALL_L + e.w / 2) { e.x = WALL_L + e.w / 2; if (e.vx < -6 && e.hitstun > 0) { e.vx = -e.vx * .4; state.shake = Math.max(state.shake, .3); burst(e.x, e.y - e.h / 2, "#ffd94d", 10, 220); } else e.vx = Math.max(0, e.vx); }
@@ -1256,103 +1307,317 @@ function drawStage() {
   ctx.fillRect(WALL_R + 24, 0, W - WALL_R - 24, GROUND);
 }
 
+/* ---------- 角色动画姿态：把静态图变成有体积感的动作 ---------- */
+function poseOf(e, t) {
+  /* 1) 呼吸 / 待机浮动：竖向轻微伸缩，看起来在呼吸 */
+  var breath = e.onGround ? Math.sin(t / 300 + e.side * 1.7) * .016 : 0;
+  var bob = e.onGround ? Math.sin(t / 300 + e.side * 1.7) * 3.2 : 0;
+
+  /* 2) 压缩拉伸：起跳前压扁、腾空拉长、落地再压扁 */
+  var sx = 1, sy = 1;
+  if (!e.onGround) {
+    var airT = NAIWA.clamp(-e.vy / 18, -1, 1);
+    sx = 1 - Math.abs(airT) * .07;          // 上下越快，横向越细
+    sy = 1 + Math.abs(airT) * .1;
+  }
+  if (e.landSquash > 0) {
+    var lq = e.landSquash;
+    sx *= 1 + lq * .22; sy *= 1 - lq * .2;
+  }
+  /* 3) 受击变形：被打时横向压扁并抖一下 */
+  if (e.hitSquash > 0) {
+    sx *= 1 - e.hitSquash * .18; sy *= 1 + e.hitSquash * .12;
+  }
+  if (e.crouch && e.onGround) sy *= .82;
+
+  /* 4) 招式各阶段的姿态：起手蓄力(后仰缩) → 判定(前冲拉伸) → 收招(回弹) */
+  var off = 0, rot = 0, lunge = 0, charge = 0, punch = 0, stretch = 1;
+  if (e.move) {
+    var ph = e.phase;
+    var dir = e.face;
+    if (ph === "startup") {
+      /* 前 1/3 往回收，后 2/3 快速蓄力前压 */
+      var st = NAIWA.clamp(e.stateT / Math.max(1, e.move.startup), 0, 1);
+      charge = st * st;
+      off = -dir * 7 * (1 - st) + dir * 3 * st;
+      rot = -dir * .1 * (1 - st) + dir * .05 * st;
+      sy = (sy) * (1 + charge * .08);
+      sx = (sx) * (1 - charge * .1);
+    } else if (ph === "active") {
+      punch = 1;
+      var at = NAIWA.clamp((e.stateT - e.move.startup) / Math.max(1, e.move.active), 0, 1);
+      lunge = dir * (18 + 14 * (1 - at));
+      rot = dir * .16 * (1 - at * .5);
+      stretch = 1 + .22 * (1 - at);
+      sx = sx * (1 + .1 * (1 - at));
+    } else {
+      var rt = NAIWA.clamp((e.stateT - e.move.startup - e.move.active) / Math.max(1, e.move.recovery), 0, 1);
+      lunge = dir * 10 * (1 - rt);
+      rot = dir * .08 * (1 - rt);
+    }
+  }
+  if (e.state === "hurt") { rot = e.face * -.22; off = -e.face * 6; }
+  if (e.state === "ko" || e.dead) { rot = e.face * 1.35; off = -e.face * 10; }
+  if (e.state === "buff") { charge = Math.max(charge, .5); sy *= 1 + .05 * Math.sin(t / 90); }
+
+  /* 5) 移动倾斜：跑得越快身体越前倾 */
+  rot += NAIWA.clamp(e.vx * .012, -.16, .16) * (e.face > 0 ? 1 : -1) * .5;
+  return {
+    bob: bob + breath * 20, sx: sx, sy: sy, off: off, rot: rot,
+    lunge: lunge, charge: charge, punch: punch, stretch: stretch,
+    active: e.phase === "active"
+  };
+}
+
+/* ---------- 残影拖尾：同一帧画多个低透明度副本，做出速度感 ---------- */
+function drawGhost(img, e, p, k, alpha, scale) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.globalCompositeOperation = "lighter";
+  ctx.translate(-e.face * k * 15, p.bob * .3);
+  ctx.scale(scale, scale);
+  ctx.drawImage(img, -e.w / 2, -e.h, e.w, e.h);
+  ctx.restore();
+}
+
+/* ---------- 打击光斑：命中瞬间从角色身上射出的能量线 ---------- */
+var streaks = [];
+function addStreaks(x, y, dir, color, n) {
+  n = n || 7;
+  for (var i = 0; i < n; i++) {
+    streaks.push({
+      x: x, y: y,
+      a: (Math.random() - .5) * 1.5 + (dir > 0 ? 0 : Math.PI),
+      len: 26 + Math.random() * 62, t: 0, life: .22 + Math.random() * .16,
+      color: color, w: 1.5 + Math.random() * 2.5
+    });
+  }
+}
+function drawStreaks() {
+  for (var i = streaks.length - 1; i >= 0; i--) {
+    var s = streaks[i];
+    s.t += .016;
+    if (s.t >= s.life) { streaks.splice(i, 1); continue; }
+    var k = s.t / s.life;
+    ctx.save();
+    ctx.globalAlpha = (1 - k) * .95;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.w * (1 - k);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(s.x + Math.cos(s.a) * s.len * (0.4 + k), s.y + Math.sin(s.a) * s.len * (0.4 + k));
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 function drawFighter(e) {
   if (!e) return;
-  var sp = sprites[e.def.id] || sprites.big;
-  var img = e.state === "attack" || e.state === "buff" ? sp.atk : (e.state === "hurt" || e.state === "ko" ? sp.sad : sp.idle);
+  var sp = sprFor(e);
+  var t = time;
+  var p = poseOf(e, t);
   var x = e.x, y = e.y;
+  /* 出招读条（只在非最平常状态显示，避免画面太吵） */
+  var barShow = e.move && e.phase !== "recovery";
 
-  /* 影子 */
+  /* ---------- 地面影子：跟着体型与离地高度变化 ---------- */
   ctx.save();
-  var shadowScale = NAIWA.clamp(1 - (GROUND - y) / 900, .35, 1);
-  ctx.globalAlpha = .42 * shadowScale;
-  ctx.fillStyle = "#000";
+  var hgt = NAIWA.clamp((GROUND - y) / 260, 0, 1);
+  var shScale = 1 - hgt * .55;
+  ctx.globalAlpha = .45 * (1 - hgt * .6);
+  var shGrad = ctx.createRadialGradient(x, GROUND + 4, 2, x, GROUND + 4, e.w * .55 * shScale);
+  shGrad.addColorStop(0, "rgba(0,0,0,.95)");
+  shGrad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = shGrad;
   ctx.beginPath();
-  ctx.ellipse(x, GROUND + 3, e.w * .45 * shadowScale, 9 * shadowScale, 0, 0, 7);
+  ctx.ellipse(x, GROUND + 4, e.w * .55 * shScale, 11 * shScale, 0, 0, 7);
   ctx.fill();
   ctx.restore();
 
+  /* ---------- 选择当前该用哪张立绘 ---------- */
+  var img, useRim = false;
+  if (e.dead || e.state === "ko") img = sp.hurt;
+  else if (e.state === "hurt") img = sp.hurt;
+  else if (e.state === "attack") {
+    if (e.phase === "active") { img = sp.atk; useRim = true; }
+    else if (e.phase === "startup") img = (e.stateT % 8 < 4 ? sp.idle : sp.wind);
+    else img = sp.wind;
+  } else if (e.state === "buff") { img = sp.rim; useRim = true; }
+  else img = sp.idle;
+
+  /* ---------- 先画残影（在角色下方） ---------- */
+  var speed = Math.abs(e.vx);
+  var ghostCount = 0;
+  if (speed > 7) ghostCount = speed > 13 ? 3 : 2;
+  if (e.move && e.move.type === "dash" && e.phase === "active") ghostCount = 4;
+  for (var g = ghostCount; g >= 1; g--) {
+    drawGhost(img, e, p, g, .1 + .05 * (ghostCount - g), 1 - g * .03);
+  }
+
+  /* ---------- 蓄力气场（起手阶段） ---------- */
+  if (p.charge > .05 && e.onGround) {
+    ctx.save();
+    ctx.globalAlpha = p.charge * .55;
+    ctx.globalCompositeOperation = "lighter";
+    var cg = ctx.createRadialGradient(x, y - e.h * .45, 4, x, y - e.h * .45, e.w * (.7 + p.charge * .5));
+    cg.addColorStop(0, rgba(e.def.accent, .5));
+    cg.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.ellipse(x, y - e.h * .45, e.w * (.7 + p.charge * .5), e.h * (.55 + p.charge * .35), 0, 0, 7);
+    ctx.fill();
+    /* 向内收拢的能量环 */
+    ctx.globalAlpha = p.charge * .8;
+    ctx.strokeStyle = rgba(e.def.accent, .9);
+    ctx.lineWidth = 2.5;
+    var rr = e.w * (1.15 - p.charge * .5);
+    ctx.beginPath(); ctx.arc(x, y - e.h * .48, rr, 0, 7); ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ---------- 主体 ---------- */
   ctx.save();
   ctx.translate(x, y);
-  /* 蹲下 / 浮空姿态 */
-  var crouchS = e.crouch && e.onGround ? .78 : 1;
-  ctx.rotate(e.anim.rot);
-  ctx.scale(e.face * e.anim.scale, e.anim.scale * crouchS);
-  ctx.translate(e.anim.lean * 12, 0);
+  ctx.rotate(e.anim.rot + p.rot);
+  ctx.scale(e.face * e.anim.scale * p.sx, e.anim.scale * p.sy);
 
-  /* 待机浮动 */
-  var bob = e.onGround ? Math.sin(time / 260 + e.side * 2) * 4 : 0;
+  /* 无敌闪烁 */
+  if (e.invuln > 0 && e.state !== "ko" && e.state !== "hurt") {
+    ctx.globalAlpha = (Math.floor(t / 60) % 2) ? .4 : .92;
+  }
 
-  /* 受击闪白 / 无敌闪烁 */
-  if (e.invuln > 0 && e.state !== "ko") ctx.globalAlpha = (Math.floor(time / 60) % 2) ? .45 : .9;
+  /* 攻击瞬间的拉伸 + 前冲位移 */
+  var drawX = -e.w / 2 + (e.anim.lean * 10 + p.off) * .5;
+  ctx.translate(p.lunge * .18, 0);
+  /* 出招瞬间横向拉伸（保持底部着地） */
+  if (p.stretch !== 1 || p.punch) {
+    ctx.translate(0, e.h);
+    ctx.scale(p.stretch, 1 / (p.stretch * .96));
+    ctx.translate(0, -e.h);
+  }
+
+  /* 描边光晕：让角色从深色背景里“立”起来，而不是一张贴纸 */
+  ctx.save();
+  ctx.shadowBlur = p.active ? 34 : (p.charge > .1 ? 26 : 16);
+  ctx.shadowColor = rgba(p.active ? e.def.accent : (e.def.glow || e.def.color), p.active ? .95 : .6);
+  ctx.drawImage(img, drawX, -e.h + p.bob, e.w, e.h);
+  ctx.restore();
+
+  /* 受击白闪：整只蛙亮一下 */
   if (e.hitFlash > 0) {
     ctx.save();
-    ctx.globalAlpha = e.hitFlash / 8 * .85;
-    ctx.drawImage(img, -e.w / 2, -e.h + bob, e.w, e.h);
+    ctx.globalAlpha = (e.hitFlash / 8) * .9;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.drawImage(img, drawX, -e.h + p.bob, e.w, e.h);
     ctx.restore();
   }
-
-  /* 能量满光环 */
-  if (e.meter >= 100) {
+  /* 攻击帧的高光轮廓叠加：出招时整只蛙被能量描边（alpha 压低，避免糊成一团白） */
+  if (useRim) {
     ctx.save();
-    ctx.globalAlpha = .28 + .16 * Math.sin(time / 140);
-    ctx.shadowBlur = 30; ctx.shadowColor = "#ffd94d";
-    ctx.strokeStyle = "#ffd94d"; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.ellipse(0, -e.h * .5, e.w * .62, e.h * .62, 0, 0, 7); ctx.stroke();
+    ctx.globalAlpha = p.active ? .7 : .4;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.drawImage(sp.rimAtk, drawX, -e.h + p.bob, e.w, e.h);
     ctx.restore();
-  }
-  /* 霸体护盾 */
-  if (e.armor > 0) {
-    ctx.save();
-    ctx.globalAlpha = .3;
-    ctx.strokeStyle = "#ffb300"; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.ellipse(0, -e.h * .5, e.w * .58, e.h * .6, 0, 0, 7); ctx.stroke();
-    ctx.restore();
-  }
-  /* 减速冰霜 */
-  if (e.slow > 0) {
-    ctx.save(); ctx.globalAlpha = .35; ctx.fillStyle = "#5aa8ff";
-    ctx.beginPath(); ctx.ellipse(0, -e.h * .5, e.w * .5, e.h * .55, 0, 0, 7); ctx.fill();
-    ctx.restore();
-  }
-
-  ctx.shadowBlur = 18; ctx.shadowColor = NAIWA.rgba(e.def.glow || e.def.color, .55);
-  /* 攻击姿态：前倾 */
-  var atkOff = 0, atkRot = 0;
-  if (e.state === "attack" && e.move) {
-    var ph = e.phase;
-    atkOff = ph === "startup" ? -6 : ph === "active" ? 16 : 4;
-    atkRot = ph === "active" ? e.face * .12 : 0;
-  }
-  ctx.rotate(atkRot);
-  ctx.drawImage(img, -e.w / 2 + atkOff * .5, -e.h + bob, e.w, e.h);
-  ctx.shadowBlur = 0;
-
-  /* 装死 / KO 姿态 */
-  if (e.dead) {
-    ctx.rotate(e.face * 1.3);
-    ctx.translate(0, 12);
   }
   ctx.restore();
+
+  /* ---------- 命中光斑（画在角色之上） ---------- */
+  if (p.punch && e.move) {
+    var cx2 = x + e.face * e.w * .62, cy2 = y - e.h * .55;
+    var sr = 60 + 26 * Math.sin(t / 60);
+    ctx.save();
+    ctx.globalAlpha = .5;
+    ctx.globalCompositeOperation = "lighter";
+    var fg2 = ctx.createRadialGradient(cx2, cy2, 2, cx2, cy2, sr);
+    fg2.addColorStop(0, rgba(e.def.glow || "#fff", .85));
+    fg2.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = fg2;
+    ctx.beginPath(); ctx.arc(cx2, cy2, sr, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+
+  /* ---------- 状态标记 ---------- */
+  if (e.meter >= 100) {
+    ctx.save();
+    ctx.globalAlpha = .3 + .18 * Math.sin(t / 140);
+    ctx.shadowBlur = 32; ctx.shadowColor = "#ffd94d";
+    ctx.strokeStyle = "#ffd94d"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(x, y - e.h * .5, e.w * .64, e.h * .64, 0, 0, 7); ctx.stroke();
+    ctx.restore();
+  }
+  if (e.armor > 0) {
+    ctx.save();
+    ctx.globalAlpha = .32;
+    ctx.strokeStyle = "#ffb300"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(x, y - e.h * .5, e.w * .6, e.h * .62, 0, 0, 7); ctx.stroke();
+    ctx.restore();
+  }
+  if (e.slow > 0) {
+    ctx.save(); ctx.globalAlpha = .32; ctx.fillStyle = "#5aa8ff";
+    ctx.beginPath(); ctx.ellipse(x, y - e.h * .5, e.w * .5, e.h * .55, 0, 0, 7); ctx.fill();
+    /* 冰晶碎屑 */
+    ctx.globalAlpha = .6; ctx.fillStyle = "#cfe6ff";
+    for (var ic = 0; ic < 5; ic++) {
+      var ia = t / 900 + ic * 1.26;
+      ctx.fillRect(x + Math.cos(ia) * e.w * .45, y - e.h * .5 + Math.sin(ia) * e.h * .42, 3, 3);
+    }
+    ctx.restore();
+  }
+  if (e.burn > 0) {
+    ctx.save();
+    ctx.globalAlpha = .35;
+    ctx.globalCompositeOperation = "lighter";
+    for (var bc = 0; bc < 4; bc++) {
+      var ba = t / 240 + bc * 1.6;
+      ctx.fillStyle = "#ff8a3c";
+      ctx.beginPath();
+      ctx.arc(x + Math.sin(ba) * e.w * .28, y - e.h * (.3 + (bc % 3) * .22), 6 + (bc % 3) * 3, 0, 7);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 
   /* 防御盾 */
   if ((e.guard || e.crouch) && e.onGround) {
     ctx.save();
-    ctx.globalAlpha = .3 + .12 * Math.sin(time / 90);
+    ctx.globalAlpha = .34 + .14 * Math.sin(t / 90);
     ctx.strokeStyle = "#22d3ee"; ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(x + e.face * 16, y - e.h * .5, e.w * .48, -1.2, 1.2);
+    ctx.arc(x + e.face * 16, y - e.h * .5, e.w * .5, -1.2, 1.2);
     ctx.stroke();
     ctx.restore();
   }
   /* 反击架势提示 */
   if (e.counter) {
     ctx.save();
-    ctx.globalAlpha = .55 + .3 * Math.sin(time / 70);
+    ctx.globalAlpha = .55 + .3 * Math.sin(t / 70);
     ctx.strokeStyle = "#22d3ee"; ctx.lineWidth = 2;
     ctx.setLineDash([6, 5]);
-    ctx.beginPath(); ctx.ellipse(x, y - e.h * .5, e.w * .62, e.h * .6, 0, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(x, y - e.h * .5, e.w * .64, e.h * .62, 0, 0, 7); ctx.stroke();
     ctx.setLineDash([]);
+    ctx.restore();
+  }
+  /* 出招阶段读条 */
+  if (barShow) {
+    var m = e.move, total = m.startup + m.active + m.recovery;
+    var bw = e.w * 1.15, bx = x - bw / 2, by = y - e.h - 26;
+    var segs = [[m.startup, "#22d3ee"], [m.active, "#ff4d4f"], [m.recovery, "#6b7398"]];
+    ctx.save();
+    ctx.globalAlpha = .95;
+    ctx.fillStyle = "rgba(5,7,26,.8)";
+    ctx.beginPath(); ctx.roundRect(bx - 2, by - 2, bw + 4, 9, 4); ctx.fill();
+    var acc = 0;
+    segs.forEach(function (sg) {
+      var w = bw * (sg[0] / total);
+      var left = NAIWA.clamp((e.stateT - acc) / sg[0], 0, 1);
+      if (left > 0) {
+        ctx.fillStyle = sg[1];
+        ctx.fillRect(bx + bw * (acc / total), by, w * left, 5);
+      }
+      acc += sg[0];
+    });
     ctx.restore();
   }
   /* 判定框调试 */
@@ -1395,10 +1660,10 @@ function draw() {
   }
   drawStage();
 
-  /* 残像 */
+  /* 残影（旧的轻量版，保留给冲刺拖尾） */
   for (var i = 0; i < afterimages.length; i++) {
     var a = afterimages[i];
-    var alpha = (1 - a.t / a.life) * .38;
+    var alpha = (1 - a.t / a.life) * .3;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.globalCompositeOperation = "lighter";
@@ -1410,6 +1675,9 @@ function draw() {
   /* 角色（被击中的后画，覆盖在上层） */
   var order = P[0] && P[1] ? (P[0].hitFlash >= P[1].hitFlash ? [P[1], P[0]] : [P[0], P[1]]) : [P[0], P[1]];
   order.forEach(function (e) { if (e) drawFighter(e); });
+
+  /* 命中光斑（在所有角色之上） */
+  drawStreaks();
 
   /* 投射物 */
   for (var j = 0; j < projectiles.length; j++) {
