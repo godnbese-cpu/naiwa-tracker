@@ -1,0 +1,30 @@
+# 🐸 奶蛙观测站 · 构建与依赖
+node_modules/
+vendor/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# 操作系统 / 编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# 本地临时
+*.log
+*.tmp
+.acl-recovery/
+dump/
+
+# ---------------------------------------------------------------
+# 爬虫采集到的图片本体（第三方素材，默认不提交，避免体积与版权问题）
+# 只保留清单与衍生数据这三个文件。
+# 如果你确认图片可以公开分发，删掉下面两行即可。
+assets/naiwa-images/*
+!assets/naiwa-images/manifest.json
+!assets/naiwa-images/derived.json
+!assets/naiwa-images/naiwa-data.js
+!assets/naiwa-images/.gitkeep

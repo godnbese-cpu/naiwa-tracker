@@ -57,6 +57,10 @@
   nav a:hover{color:var(--cyan);border-color:rgba(34,211,238,.5);box-shadow:0 0 14px rgba(34,211,238,.25);transform:translateY(-2px)}
   nav a.hot{color:#ffd94d}
   nav a.hot:hover{color:#ffd94d;border-color:rgba(255,217,77,.6);box-shadow:0 0 14px rgba(255,217,77,.3)}
+  nav.secnav{margin-top:8px;z-index:49}
+  nav.secnav .inner{padding:8px 20px}
+  nav.secnav a{font-size:12.5px;color:var(--muted);background:rgba(16,22,48,.5);border-color:var(--line)}
+  nav.secnav a:hover{color:var(--frog1);border-color:rgba(255,217,77,.5);box-shadow:0 0 12px rgba(255,217,77,.25)}
 
   .wrap{position:relative;z-index:2;max-width:1280px;margin:0 auto;padding:18px 20px 60px}
 
@@ -202,15 +206,13 @@
   <div class="party">🎉 🐸 🎉 🐸 🎉</div>
 </header>
 
-<nav><div class="inner">
+<nav data-naiwa-nav><div class="inner"></div></nav>
+<nav class="secnav"><div class="inner">
   <a href="#live">📊 实时数据</a>
   <a href="#mapsec">🌍 传播光络图</a>
   <a href="#history">📜 奶蛙编年史</a>
   <a href="#case">🎁 砸箱子</a>
   <a href="#ticket">🎫 送票</a>
-  <a href="race.html">🏎️ 奶蛙赛车</a>
-  <a href="battle.html">⚔️ 奶蛙决斗</a>
-  <a href="shop.html">🛒 奶蛙购</a>
 </div></nav>
 
 <div class="wrap">
@@ -349,26 +351,6 @@
 </div>
 
 <script>
-/* ================= 背景粒子光络网 ================= */
-(function(){
-  const cv=document.getElementById("netbg"),ctx=cv.getContext("2d");
-  let W,H,pts=[];
-  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;
-    pts=Array.from({length:Math.min(90,W*H/16000)},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.45,vy:(Math.random()-.5)*.45}));
-  }
-  resize();addEventListener("resize",resize);
-  (function tick(){
-    ctx.clearRect(0,0,W,H);
-    for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;
-      ctx.fillStyle="rgba(34,211,238,.7)";ctx.beginPath();ctx.arc(p.x,p.y,1.4,0,7);ctx.fill();}
-    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
-      const a=pts[i],b=pts[j],d=Math.hypot(a.x-b.x,a.y-b.y);
-      if(d<130){ctx.strokeStyle=`rgba(255,217,77,${(1-d/130)*.28})`;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
-    }
-    requestAnimationFrame(tick);
-  })();
-})();
-
 /* ================= 顶部彩带 ================= */
 (function(){
   const cv=document.getElementById("confetti"),ctx=cv.getContext("2d"),hero=cv.parentElement;
@@ -417,6 +399,12 @@ function updateClock(){
 updateClock();setInterval(updateClock,1000);
 
 /* ================= 模拟推演引擎（已明确标注） ================= */
+/* 数据模型说明：基于奶蛙真实传播规律建模——
+   ① 中国为主场（星野/抖音/B站/小红书/微博起源，亿级破圈）
+   ② 海外华人圈为第二梯队（马来西亚/新加坡/北美/澳新）
+   ③ 东亚文化圈跟进（日韩）
+   ④ 其余国家长尾分布
+   数值为全球单日使用次数的推演估计 */
 const countries=["中国","美国","日本","韩国","印度","泰国","越南","马来西亚","新加坡","印度尼西亚","菲律宾","英国","法国","德国","意大利","西班牙","俄罗斯","加拿大","巴西","澳大利亚","埃及","南非","墨西哥","土耳其","沙特阿拉伯","新西兰","荷兰","瑞典","波兰","阿根廷"];
 const coords={
   "中国":[116.4,39.9],"美国":[-98,39.5],"日本":[139.7,35.7],"韩国":[127,37.5],"印度":[77.2,28.6],
@@ -426,12 +414,18 @@ const coords={
   "埃及":[31.2,30.0],"南非":[28.0,-26.2],"墨西哥":[-99.1,19.4],"土耳其":[32.85,39.93],"沙特阿拉伯":[46.7,24.7],
   "新西兰":[174.8,-41.3],"荷兰":[4.9,52.37],"瑞典":[18.06,59.33],"波兰":[21.0,52.23],"阿根廷":[-58.4,-34.6]
 };
-/* 真实传播模型：奶蛙起源于中国（星野/抖音），海外以华人圈为主扩散
-   权重依据：抖音/B站/小红书用户规模 + 海外华人分布 */
-const weights=[100,3.2,2.8,1.5,0.9,1.8,2.2,4.5,5.2,1.1,0.8,1.2,0.6,0.9,0.5,0.4,0.7,1.8,0.6,1.9,0.2,0.1,0.5,0.3,0.2,0.7,0.4,0.3,0.4,0.3];
+/* 各国占比（%），总和=100 —— 依据真实传播规律设定 */
+const pct=[
+  71.0, 3.5, 2.5, 1.5, 0.5, 1.5, 1.2, 4.0, 3.0, 0.6,
+  0.5, 1.2, 0.7, 0.8, 0.4, 0.4, 0.5, 2.0, 0.4, 1.8,
+  0.1, 0.1, 0.3, 0.2, 0.2, 0.5, 0.3, 0.2, 0.2, 0.2
+];
+const GLOBAL_TOTAL=65000000; // 全球单日总使用次数推演值（6500万）
 const baseData={};
-countries.forEach((c,i)=>{baseData[c]=Math.round(90000*(weights[i]||4)/100*(0.8+Math.random()*0.4));});
-/* 传播路径分层：①中国→东亚/东南亚（抖音海外）②中国→欧美华人圈 ③中国→全球 */
+countries.forEach((c,i)=>{
+  baseData[c]=Math.round(GLOBAL_TOTAL*pct[i]/100*(0.94+Math.random()*0.12));
+});
+/* 传播路径分层：①中国→东亚/东南亚（抖音海外+文化圈）②中国→欧美华人圈 ③中国→全球 */
 const ROUTES=[
   {to:"日本",tier:1},{to:"韩国",tier:1},{to:"新加坡",tier:1},{to:"马来西亚",tier:1},{to:"泰国",tier:1},{to:"越南",tier:1},
   {to:"美国",tier:2},{to:"加拿大",tier:2},{to:"澳大利亚",tier:2},{to:"英国",tier:2},{to:"德国",tier:2},{to:"法国",tier:2},
@@ -442,8 +436,19 @@ const ROUTES=[
 const TIER_COLOR={1:"#ffd94d",2:"#22d3ee",3:"#ff6ec7"};
 const acts=["在评论区发出奶蛙「齁齁齁」","转发了黄色三幻神合体帖","在弹幕里刷了奶蛙语录","把奶蛙设为群表情置顶","转发了奶蛙鬼畜二创","用奶蛙回应了工作群消息","收藏了奶蛙高清原图","给奶蛙梗图点了赞","用奶蛙回复了「容我三思」","在奶龙官方评论区发奶蛙（勇）"];
 function maskIP(){return `${1+Math.floor(Math.random()*223)}.${Math.floor(Math.random()*256)}.${Math.floor(Math.random()*256)}.*`;}
-function randCountry(){return countries[Math.floor(Math.random()*Math.max(6,countries.length*0.5))];}
+/* 按真实占比加权抽样——中国约七成，海外华人圈次之 */
+function randCountry(){
+  const r=Math.random()*100;let acc=0;
+  for(let i=0;i<countries.length;i++){acc+=pct[i];if(r<=acc)return countries[i];}
+  return countries[0];
+}
 function now(){const d=new Date();return d.toTimeString().slice(0,8);}
+/* 格式化大数字：万/亿 */
+function fmt(n){
+  if(n>=1e8)return (n/1e8).toFixed(2)+"亿";
+  if(n>=1e4)return (n/1e4).toFixed(1)+"万";
+  return n.toLocaleString();
+}
 
 /* ================= 实时数据流 ================= */
 const feedEl=document.getElementById("feed");
@@ -482,7 +487,7 @@ const GEO_SOURCES=[
   );
   mapChart.setOption({
     backgroundColor:"transparent",
-    tooltip:{formatter:p=>p.seriesType==="effectScatter"?`${p.name}：${baseData[p.name].toLocaleString()} 次/日（推演）`:"奶蛙传播之光"},
+    tooltip:{formatter:p=>p.seriesType==="effectScatter"?`${p.name}：${fmt(baseData[p.name])} 次/日（推演 · 占${(pct[countries.indexOf(p.name)]||0).toFixed(1)}%）`:"奶蛙传播之光"},
     geo:{
       map:"world",roam:true,zoom:1.2,scaleLimit:{min:0.8,max:8},
       itemStyle:{areaColor:"#0b1430",borderColor:"#2a3a6a",borderWidth:0.6,shadowColor:"rgba(34,211,238,.25)",shadowBlur:6},
@@ -491,7 +496,7 @@ const GEO_SOURCES=[
     series:[
       {
         type:"effectScatter",coordinateSystem:"geo",zlevel:2,
-        symbolSize:val=>8+val[2]/4500,
+        symbolSize:val=>10+Math.sqrt(val[2])/GLOBAL_TOTAL*90000,
         rippleEffect:{brushType:"stroke",scale:3.4,period:4},
         itemStyle:{color:"#ffd94d",shadowBlur:12,shadowColor:"#ffd94d"},
         label:{show:true,formatter:"{b}",position:"right",color:"#8b93c8",fontSize:10},
@@ -646,5 +651,6 @@ ticketBtn.addEventListener("click",()=>{
 });
 window.addEventListener("resize",()=>{mapChart.resize();trendChart.resize();pieChart.resize();});
 </script>
+<script src="naiwa-common.js"></script>
 </body>
 </html>

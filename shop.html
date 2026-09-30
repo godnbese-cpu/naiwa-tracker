@@ -5,283 +5,1062 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🛒 奶蛙购 · 官方周边商城</title>
 <link rel="icon" href="naiwa.webp">
+<meta name="description" content="奶蛙购：奶蛙宇宙官方周边商城，限时秒杀、优惠券、购物车、下单全流程。">
 <style>
   :root{
     --bg:#05071a; --panel:rgba(16,22,48,.72); --ink:#e8ecff; --muted:#8b93c8;
     --frog1:#ffd94d; --cyan:#22d3ee; --accent:#ff6ec7; --green:#7ec850; --line:#2a3a6a;
+    --red:#ff4d4f; --card:#0d1330;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
-  body{
-    background:radial-gradient(1200px 600px at 50% -10%, rgba(34,211,238,.10), transparent 60%), var(--bg);
-    color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;min-height:100vh;
-  }
-  canvas#netbg{position:fixed;inset:0;z-index:0;opacity:.4}
-  header{position:relative;z-index:2;text-align:center;padding:34px 16px 6px}
-  h1{font-size:clamp(26px,4.5vw,42px);letter-spacing:3px;
-    background:linear-gradient(90deg,#ffd94d,#ff6ec7,#22d3ee);background-size:300% 100%;
-    -webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
-  @keyframes flow{0%{background-position:0% 0}100%{background-position:300% 0}}
-  .subtitle{color:var(--muted);margin-top:8px;font-size:14px}
-  nav{position:sticky;top:0;z-index:50;background:rgba(5,7,26,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);margin-top:18px}
-  nav .inner{max-width:1280px;margin:0 auto;display:flex;gap:6px;padding:10px 20px;overflow-x:auto;scrollbar-width:none}
-  nav a{text-decoration:none;color:var(--ink);font-size:13px;padding:6px 16px;border-radius:20px;white-space:nowrap;transition:all .25s;border:1px solid transparent}
+  body{background:var(--bg);color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;min-height:100vh}
+  canvas#netbg{position:fixed;inset:0;z-index:0;opacity:.35;pointer-events:none}
+  a{color:inherit}
+
+  /* ============ 顶部搜索栏（淘宝式） ============ */
+  .topbar{position:relative;z-index:60;background:linear-gradient(90deg,#0a0f2e,#131a44,#0a0f2e);
+    border-bottom:1px solid var(--line);padding:12px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:9px;font-size:19px;font-weight:900;letter-spacing:1px}
+  .logo img{width:38px;height:38px;object-fit:contain;border-radius:50%;border:2px solid var(--frog1);
+    box-shadow:0 0 16px rgba(255,217,77,.5);animation:hop 2.4s ease-in-out infinite}
+  @keyframes hop{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-5px) rotate(3deg)}}
+  .logo span{background:linear-gradient(90deg,#ffd94d,#ff6ec7,#22d3ee);background-size:250% 100%;
+    -webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite}
+  @keyframes flow{0%{background-position:0 0}100%{background-position:250% 0}}
+  .search{flex:1;min-width:240px;display:flex;max-width:640px;position:relative}
+  .search input{flex:1;background:rgba(5,7,26,.9);border:2px solid var(--frog1);border-right:none;
+    border-radius:24px 0 0 24px;padding:11px 18px;color:var(--ink);font-size:13.5px;font-family:inherit;outline:none}
+  .search input:focus{box-shadow:0 0 20px rgba(255,217,77,.4)}
+  .search button{border:2px solid var(--frog1);background:linear-gradient(135deg,#ffd94d,#f5a800);color:#05071a;
+    font-weight:900;font-size:13.5px;padding:0 26px;border-radius:0 24px 24px 0;cursor:pointer;font-family:inherit}
+  .search button:hover{filter:brightness(1.1)}
+  .hotwords{position:absolute;top:48px;left:18px;display:flex;gap:10px;font-size:11px;color:var(--muted);flex-wrap:wrap;z-index:5}
+  .hotwords b{cursor:pointer;font-weight:400}
+  .hotwords b:hover{color:var(--frog1)}
+  .topacts{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .tbtn{background:rgba(16,22,48,.8);border:1px solid var(--line);color:var(--ink);border-radius:20px;
+    padding:8px 15px;font-size:12.5px;cursor:pointer;font-family:inherit;transition:all .22s;position:relative;white-space:nowrap}
+  .tbtn:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 14px rgba(34,211,238,.25)}
+  .tbtn .dot{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:10px;font-weight:800;
+    min-width:19px;height:19px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+  nav{position:sticky;top:0;z-index:55;background:rgba(5,7,26,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  nav .inner{max-width:1320px;margin:0 auto;display:flex;gap:6px;padding:8px 16px;overflow-x:auto;scrollbar-width:none}
+  nav a{text-decoration:none;color:var(--ink);font-size:12.5px;padding:6px 14px;border-radius:20px;white-space:nowrap;transition:all .25s;border:1px solid transparent}
   nav a:hover{color:var(--cyan);border-color:rgba(34,211,238,.5);box-shadow:0 0 14px rgba(34,211,238,.25)}
-  nav a.hot{color:var(--frog1)}
-  .wrap{position:relative;z-index:2;max-width:1280px;margin:0 auto;padding:22px 20px 80px}
 
-  .banner{
-    display:flex;align-items:center;gap:20px;flex-wrap:wrap;
-    background:linear-gradient(120deg,rgba(255,217,77,.08),rgba(255,110,199,.08));
-    border:1px solid rgba(255,217,77,.3);border-radius:20px;padding:20px 26px;margin-bottom:24px;
-  }
-  .banner img{width:70px;height:70px;object-fit:contain;filter:drop-shadow(0 0 14px rgba(255,217,77,.4))}
-  .banner div h3{font-size:19px}
-  .banner div p{font-size:12.5px;color:var(--muted);margin-top:4px}
-  .banner .off{margin-left:auto;font-size:26px;font-weight:900;color:var(--accent);text-shadow:0 0 16px rgba(255,110,199,.5)}
+  .wrap{position:relative;z-index:2;max-width:1320px;margin:0 auto;padding:16px 18px 90px}
 
-  .cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
-  .cats button{
-    border:1px solid var(--line);background:rgba(16,22,48,.5);color:var(--muted);
-    border-radius:20px;padding:7px 18px;font-size:13px;cursor:pointer;font-family:inherit;transition:all .25s;
-  }
-  .cats button.on{background:linear-gradient(135deg,#22d3ee,#ffd94d);color:#05071a;font-weight:700;border-color:transparent;box-shadow:0 0 16px rgba(34,211,238,.35)}
+  /* ============ 秒杀横幅 ============ */
+  .flash{display:flex;align-items:center;gap:18px;flex-wrap:wrap;border-radius:20px;padding:16px 22px;margin-bottom:16px;
+    background:linear-gradient(120deg,rgba(255,77,79,.2),rgba(255,217,77,.14),rgba(255,110,199,.16));
+    border:1px solid rgba(255,77,79,.45);position:relative;overflow:hidden}
+  .flash::after{content:"";position:absolute;top:0;left:-60%;width:50%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent);animation:sheen 3.2s infinite}
+  @keyframes sheen{0%{left:-60%}100%{left:130%}}
+  .flash img{width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 0 14px rgba(255,217,77,.6))}
+  .flash .t1{font-size:19px;font-weight:900;color:#fff}
+  .flash .t2{font-size:12px;color:var(--muted);margin-top:4px}
+  .flash .cd{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+  .flash .cd b{background:#05071a;border:1px solid var(--red);color:var(--red);font-family:Consolas,monospace;
+    font-size:19px;padding:5px 10px;border-radius:9px;font-weight:900;box-shadow:0 0 14px rgba(255,77,79,.4)}
+  .flash .cd i{font-style:normal;color:var(--red);font-weight:900}
 
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
-  .card{
-    background:var(--panel);backdrop-filter:blur(8px);border-radius:18px;border:1px solid var(--line);
-    padding:16px;transition:all .3s;position:relative;overflow:hidden;
-  }
-  .card:hover{transform:translateY(-5px);box-shadow:0 0 30px rgba(34,211,238,.2);border-color:rgba(34,211,238,.4)}
-  .card .img{
-    height:150px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;
-    background:radial-gradient(circle at 50% 60%, rgba(255,217,77,.08), transparent 70%);border-radius:12px;
-  }
-  .card .img img{max-width:110px;max-height:140px;object-fit:contain;filter:drop-shadow(0 8px 16px rgba(0,0,0,.4));transition:transform .3s}
-  .card:hover .img img{transform:scale(1.1) rotate(-3deg)}
-  .card .img .emoji{font-size:80px;filter:drop-shadow(0 8px 16px rgba(0,0,0,.4));transition:transform .3s}
-  .card:hover .img .emoji{transform:scale(1.1) rotate(-3deg)}
-  .card h4{font-size:15px;margin-bottom:4px}
-  .card .desc{font-size:11.5px;color:var(--muted);line-height:1.6;min-height:36px}
-  .card .price-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
-  .card .price{font-size:19px;font-weight:800;color:var(--accent)}
-  .card .price small{font-size:11px;color:var(--muted);font-weight:400;text-decoration:line-through;margin-left:6px}
-  .card .sold{font-size:10px;color:var(--muted)}
-  .add-btn{
-    width:100%;margin-top:12px;border:none;cursor:pointer;font-size:13px;font-weight:700;
-    padding:10px;border-radius:12px;color:#05071a;background:linear-gradient(135deg,#22d3ee,#ffd94d);
-    font-family:inherit;transition:all .25s;
-  }
-  .add-btn:hover{box-shadow:0 0 18px rgba(34,211,238,.45)}
-  .add-btn.added{background:var(--green);color:#05071a}
-  .badge{position:absolute;top:12px;right:-32px;background:var(--accent);color:#fff;font-size:10px;padding:3px 38px;transform:rotate(35deg);box-shadow:0 0 14px rgba(255,110,199,.5)}
-  .badge.new{background:var(--green)}
+  /* ============ 优惠券条 ============ */
+  .coupons{display:flex;gap:10px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none}
+  .cp{flex-shrink:0;border:1px dashed var(--frog1);border-radius:12px;padding:8px 16px;background:rgba(255,217,77,.06);
+    cursor:pointer;transition:all .2s;text-align:center;min-width:118px}
+  .cp:hover{background:rgba(255,217,77,.16);transform:translateY(-2px)}
+  .cp.got{opacity:.5;cursor:default;border-color:var(--line)}
+  .cp b{display:block;font-size:16px;color:var(--frog1)}
+  .cp span{font-size:10.5px;color:var(--muted)}
 
-  /* 购物车浮球 */
-  .cart-fab{
-    position:fixed;right:26px;bottom:26px;z-index:60;width:64px;height:64px;border-radius:50%;
-    background:linear-gradient(135deg,#22d3ee,#ffd94d);display:flex;align-items:center;justify-content:center;
-    font-size:28px;cursor:pointer;box-shadow:0 0 30px rgba(34,211,238,.5);transition:transform .2s;border:none;
-  }
-  .cart-fab:hover{transform:scale(1.1)}
-  .cart-fab .count{
-    position:absolute;top:-4px;right:-4px;background:var(--accent);color:#fff;font-size:12px;font-weight:800;
-    min-width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;padding:0 5px;
-  }
-  .cart-drawer{
-    position:fixed;right:0;top:0;bottom:0;width:min(360px,90vw);z-index:70;background:#0d1430;
-    border-left:1px solid var(--line);padding:22px;transform:translateX(100%);transition:transform .35s cubic-bezier(.2,.8,.3,1);
-    overflow-y:auto;box-shadow:-20px 0 60px rgba(0,0,0,.5);
-  }
-  .cart-drawer.open{transform:none}
-  .cart-drawer h3{display:flex;justify-content:space-between;align-items:center;font-size:18px;margin-bottom:16px}
-  .cart-drawer h3 button{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer}
-  .cart-item{display:flex;align-items:center;gap:12px;padding:10px;background:rgba(16,22,48,.6);border-radius:12px;margin-bottom:10px}
-  .cart-item img{width:44px;height:44px;object-fit:contain}
-  .cart-item .info{flex:1}
-  .cart-item .info h5{font-size:13px}
-  .cart-item .info span{font-size:12px;color:var(--accent);font-weight:700}
-  .cart-item .qty{display:flex;align-items:center;gap:8px}
-  .cart-item .qty button{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--ink);cursor:pointer;font-size:14px}
-  .cart-item .qty b{font-size:13px;min-width:20px;text-align:center}
-  .cart-empty{text-align:center;color:var(--muted);padding:40px 0;font-size:13px}
-  .cart-total{display:flex;justify-content:space-between;font-size:16px;font-weight:800;padding:16px 0;border-top:1px dashed var(--line);margin-top:14px}
-  .cart-total span:last-child{color:var(--accent);font-size:22px}
-  .checkout-btn{
-    width:100%;border:none;cursor:pointer;font-size:15px;font-weight:800;padding:13px;border-radius:14px;
-    color:#05071a;background:linear-gradient(135deg,#ff6ec7,#ffd94d);font-family:inherit;box-shadow:0 0 20px rgba(255,110,199,.35);
-  }
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:65;opacity:0;pointer-events:none;transition:opacity .3s}
-  .overlay.open{opacity:1;pointer-events:auto}
+  /* ============ 主体布局 ============ */
+  .layout{display:grid;grid-template-columns:196px 1fr;gap:16px;align-items:start}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}}
+  .side{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;position:sticky;top:64px}
+  @media(max-width:900px){.side{position:static}}
+  .side h3{font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+  .side h3 span{font-size:10.5px;font-weight:400;color:var(--muted)}
+  .cat{display:flex;flex-direction:column;gap:4px;margin-bottom:16px}
+  .cat button{text-align:left;background:none;border:1px solid transparent;color:var(--muted);font-size:12.5px;
+    padding:8px 11px;border-radius:10px;cursor:pointer;font-family:inherit;transition:all .2s;display:flex;justify-content:space-between}
+  .cat button:hover{background:rgba(34,211,238,.08);color:var(--ink)}
+  .cat button.on{background:linear-gradient(135deg,rgba(255,217,77,.2),rgba(255,110,199,.12));
+    color:var(--frog1);font-weight:800;border-color:rgba(255,217,77,.4)}
+  .cat button i{font-style:normal;font-size:10.5px;opacity:.7}
+  .pricebox{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-bottom:16px}
+  .pricebox input{width:100%;background:rgba(5,7,26,.8);border:1px solid var(--line);border-radius:8px;
+    padding:7px 9px;color:var(--ink);font-size:12px;font-family:inherit;outline:none}
+  .pricebox input:focus{border-color:var(--frog1)}
+  .side .apply{width:100%;background:rgba(34,211,238,.16);border:1px solid rgba(34,211,238,.5);color:var(--cyan);
+    border-radius:9px;padding:8px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+  .side .apply:hover{background:rgba(34,211,238,.28)}
 
-  .toast{
-    position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(20px);z-index:80;
-    background:rgba(16,22,48,.95);border:1px solid var(--green);color:var(--green);font-size:13px;font-weight:700;
-    padding:11px 24px;border-radius:30px;opacity:0;transition:all .3s;pointer-events:none;
-  }
+  .main{min-width:0}
+  .sortbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:9px 13px;margin-bottom:14px;font-size:12.5px}
+  .sortbar button{background:none;border:1px solid transparent;color:var(--muted);padding:5px 12px;border-radius:9px;
+    cursor:pointer;font-family:inherit;font-size:12.5px;transition:all .2s}
+  .sortbar button:hover{color:var(--ink);background:rgba(255,255,255,.05)}
+  .sortbar button.on{color:var(--frog1);border-color:rgba(255,217,77,.5);background:rgba(255,217,77,.1);font-weight:800}
+  .sortbar .cnt{margin-left:auto;color:var(--muted);font-size:11.5px}
+  .sortbar .cnt b{color:var(--frog1)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;position:relative;
+    transition:all .28s;cursor:pointer;display:flex;flex-direction:column}
+  .card:hover{transform:translateY(-6px);border-color:rgba(34,211,238,.5);box-shadow:0 14px 40px rgba(34,211,238,.18)}
+  .card .imgwrap{height:172px;display:flex;align-items:center;justify-content:center;position:relative;
+    background:radial-gradient(circle at 50% 62%, rgba(255,217,77,.1), transparent 70%)}
+  .card .imgwrap img,.card .imgwrap canvas{max-width:78%;max-height:150px;object-fit:contain;
+    filter:drop-shadow(0 10px 18px rgba(0,0,0,.55));transition:transform .32s cubic-bezier(.2,1.2,.4,1)}
+  .card:hover .imgwrap img,.card:hover .imgwrap canvas{transform:scale(1.12) rotate(-4deg)}
+  .card .flag{position:absolute;top:9px;left:9px;font-size:10px;font-weight:800;padding:3px 9px;border-radius:8px;
+    background:var(--red);color:#fff;box-shadow:0 0 12px rgba(255,77,79,.6)}
+  .card .flag.new{background:var(--green);box-shadow:0 0 12px rgba(126,200,80,.6)}
+  .card .flag.hot{background:linear-gradient(135deg,#ff6ec7,#ffd94d);color:#05071a}
+  .card .off{position:absolute;top:9px;right:9px;font-size:10px;font-weight:800;color:var(--frog1);
+    background:rgba(5,7,26,.8);border:1px solid rgba(255,217,77,.5);border-radius:8px;padding:2px 7px}
+  .card .body{padding:11px 12px 13px;display:flex;flex-direction:column;flex:1}
+  .card h4{font-size:13.5px;line-height:1.45;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card h4 em{font-style:normal;background:rgba(255,77,79,.18);color:#ff9a9a;font-size:10px;border-radius:5px;padding:0 5px;margin-right:5px}
+  .card .tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;min-height:17px}
+  .card .tags span{font-size:9.5px;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:1px 6px}
+  .card .rating{font-size:10.5px;color:var(--muted);margin-bottom:7px}
+  .card .rating b{color:var(--frog1)}
+  .card .prow{display:flex;align-items:baseline;gap:7px;margin-top:auto}
+  .card .price{font-size:20px;font-weight:900;color:var(--red);font-family:Consolas,monospace}
+  .card .price i{font-size:12px;font-style:normal}
+  .card .old{font-size:11px;color:var(--muted);text-decoration:line-through}
+  .card .sold{margin-left:auto;font-size:10.5px;color:var(--muted)}
+  .card .stockbar{height:5px;border-radius:3px;background:rgba(42,58,106,.6);overflow:hidden;margin-top:8px}
+  .card .stockbar i{display:block;height:100%;background:linear-gradient(90deg,#ff4d4f,#ffd94d)}
+  .card .stocktxt{font-size:10px;color:var(--muted);margin-top:4px;display:flex;justify-content:space-between}
+  .card .act{display:flex;gap:7px;margin-top:10px}
+  .card .act button{flex:1;border:none;border-radius:10px;padding:9px;font-size:12.5px;font-weight:800;cursor:pointer;
+    font-family:inherit;transition:all .22s}
+  .card .buy{background:linear-gradient(135deg,#ff4d4f,#ff8a3c);color:#fff}
+  .card .buy:hover{box-shadow:0 0 18px rgba(255,77,79,.6)}
+  .card .add{background:linear-gradient(135deg,#ffd94d,#f5a800);color:#05071a}
+  .card .add:hover{box-shadow:0 0 18px rgba(255,217,77,.6)}
+  .card .add.done{background:var(--green);color:#05071a}
+
+  .empty{padding:60px 20px;text-align:center;color:var(--muted);font-size:13.5px;grid-column:1/-1}
+  .empty b{display:block;font-size:42px;margin-bottom:12px}
+
+  /* ============ 详情弹层 ============ */
+  .modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:18px}
+  .modal.open{display:flex}
+  .modal .mask{position:absolute;inset:0;background:rgba(2,4,14,.78);backdrop-filter:blur(5px)}
+  .modal .box{position:relative;background:#0b1030;border:1px solid var(--line);border-radius:20px;
+    width:min(860px,96vw);max-height:88vh;overflow-y:auto;box-shadow:0 30px 90px rgba(0,0,0,.7);
+    animation:pop .3s cubic-bezier(.2,1.2,.4,1) both}
+  @keyframes pop{from{opacity:0;transform:scale(.9) translateY(20px)}to{opacity:1;transform:none}}
+  .modal .close{position:absolute;top:12px;right:14px;background:rgba(5,7,26,.8);border:1px solid var(--line);
+    color:var(--muted);width:34px;height:34px;border-radius:50%;font-size:19px;cursor:pointer;z-index:3}
+  .modal .close:hover{color:var(--red);border-color:var(--red)}
+  .dt{display:grid;grid-template-columns:minmax(240px,340px) 1fr;gap:20px;padding:22px}
+  @media(max-width:700px){.dt{grid-template-columns:1fr}}
+  .dt .big{background:radial-gradient(circle at 50% 60%, rgba(255,217,77,.13), transparent 72%);border-radius:16px;
+    display:flex;align-items:center;justify-content:center;min-height:250px;border:1px solid var(--line);position:relative;overflow:hidden}
+  .dt .big img,.dt .big canvas{max-width:82%;max-height:230px;object-fit:contain;filter:drop-shadow(0 16px 26px rgba(0,0,0,.6))}
+  .dt .big .zoombadge{position:absolute;bottom:9px;right:11px;font-size:10px;color:var(--muted)}
+  .dt h2{font-size:19px;line-height:1.45;margin-bottom:9px}
+  .dt h2 em{font-style:normal;background:var(--red);color:#fff;font-size:11px;border-radius:6px;padding:2px 7px;margin-right:7px;vertical-align:2px}
+  .dt .sub{font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:13px}
+  .pbox{background:linear-gradient(120deg,rgba(255,77,79,.14),rgba(255,217,77,.08));border:1px solid rgba(255,77,79,.3);
+    border-radius:13px;padding:13px 16px;margin-bottom:14px}
+  .pbox .now{font-size:31px;font-weight:900;color:var(--red);font-family:Consolas,monospace}
+  .pbox .now i{font-size:15px;font-style:normal}
+  .pbox .old{font-size:12px;color:var(--muted);text-decoration:line-through;margin-left:9px}
+  .pbox .save{font-size:11.5px;color:var(--green);margin-left:9px}
+  .pbox .row2{display:flex;gap:12px;font-size:11.5px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+  .spec{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12px;margin-bottom:14px}
+  .spec .k{color:var(--muted)} .spec .v{color:var(--ink)}
+  .qtyrow{display:flex;align-items:center;gap:11px;margin-bottom:15px;font-size:12.5px;color:var(--muted)}
+  .qtyrow .q{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .qtyrow .q button{width:33px;height:33px;background:rgba(16,22,48,.7);border:none;color:var(--ink);font-size:16px;cursor:pointer}
+  .qtyrow .q button:hover{background:rgba(34,211,238,.2)}
+  .qtyrow .q b{width:46px;text-align:center;font-size:14px}
+  .dt .buys{display:flex;gap:9px;flex-wrap:wrap}
+  .dt .buys button{border:none;border-radius:12px;padding:13px 30px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .22s}
+  .dt .buys .b1{background:linear-gradient(135deg,#ffd94d,#f5a800);color:#05071a}
+  .dt .buys .b2{background:linear-gradient(135deg,#ff4d4f,#ff8a3c);color:#fff;box-shadow:0 0 22px rgba(255,77,79,.45)}
+  .dt .buys button:hover{transform:translateY(-2px);filter:brightness(1.08)}
+  .reviews{border-top:1px dashed var(--line);padding:18px 22px 24px}
+  .reviews h3{font-size:14px;margin-bottom:12px;display:flex;gap:9px;align-items:center}
+  .reviews h3 span{font-size:11px;color:var(--muted);font-weight:400}
+  .rv{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid rgba(42,58,106,.4);font-size:12.5px}
+  .rv .av{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-size:17px;background:rgba(34,211,238,.14);border:1px solid var(--line)}
+  .rv .rc{flex:1}
+  .rv .rn{color:var(--muted);font-size:11px;margin-bottom:3px}
+  .rv .rn b{color:var(--frog1)}
+  .rv .stars{color:var(--frog1);font-size:11px;letter-spacing:1px}
+
+  /* ============ 购物车抽屉 ============ */
+  .drawer{position:fixed;right:0;top:0;bottom:0;width:min(400px,93vw);z-index:210;background:#0a0f2b;
+    border-left:1px solid var(--line);transform:translateX(102%);transition:transform .36s cubic-bezier(.2,.85,.3,1);
+    display:flex;flex-direction:column;box-shadow:-24px 0 70px rgba(0,0,0,.6)}
+  .drawer.open{transform:none}
+  .drawer .dh{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .drawer .dh h3{font-size:16px}
+  .drawer .dh button{background:none;border:none;color:var(--muted);font-size:23px;cursor:pointer}
+  .drawer .dh button:hover{color:var(--red)}
+  .drawer .dbody{flex:1;overflow-y:auto;padding:14px}
+  .ci{display:flex;gap:11px;background:rgba(16,22,48,.66);border:1px solid var(--line);border-radius:13px;padding:10px;margin-bottom:10px}
+  .ci .pimg{width:56px;height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(5,7,26,.7);border-radius:9px}
+  .ci .pimg img,.ci .pimg canvas{max-width:48px;max-height:48px;object-fit:contain}
+  .ci .info{flex:1;min-width:0}
+  .ci .info h5{font-size:12.5px;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ci .info .pp{font-size:14px;font-weight:800;color:var(--red);font-family:Consolas,monospace}
+  .ci .qty{display:flex;align-items:center;gap:7px;margin-top:6px}
+  .ci .qty button{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--ink);cursor:pointer;font-size:13px}
+  .ci .qty button:hover{border-color:var(--cyan);color:var(--cyan)}
+  .ci .qty b{font-size:12.5px;min-width:20px;text-align:center}
+  .ci .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;align-self:flex-start}
+  .ci .del:hover{color:var(--red)}
+  .drawer .dfoot{padding:14px 18px;border-top:1px solid var(--line);background:rgba(5,7,26,.7)}
+  .sumrow{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+  .sumrow.total{font-size:15px;color:var(--ink);font-weight:800;margin:9px 0 12px}
+  .sumrow.total span:last-child{color:var(--red);font-size:24px;font-family:Consolas,monospace}
+  .sumrow.save span:last-child{color:var(--green)}
+  .ckbtn{width:100%;border:none;border-radius:13px;padding:14px;font-size:15px;font-weight:900;cursor:pointer;
+    background:linear-gradient(135deg,#ff4d4f,#ff8a3c);color:#fff;font-family:inherit;box-shadow:0 0 22px rgba(255,77,79,.4)}
+  .ckbtn:hover{filter:brightness(1.08)}
+  .ckbtn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+
+  /* ============ 结算弹层 ============ */
+  .steps{display:flex;gap:6px;align-items:center;justify-content:center;padding:16px 20px 0;font-size:11.5px;color:var(--muted)}
+  .steps .s{display:flex;align-items:center;gap:6px}
+  .steps .s i{width:21px;height:21px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;
+    justify-content:center;font-style:normal;font-size:11px}
+  .steps .s.on{color:var(--frog1)} .steps .s.on i{border-color:var(--frog1);background:rgba(255,217,77,.16);font-weight:800}
+  .steps .s.done i{border-color:var(--green);color:var(--green)}
+  .steps .ln{width:36px;height:1px;background:var(--line)}
+  .ckbody{padding:20px 22px 24px}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+  .field input,.field select,.field textarea{width:100%;background:rgba(5,7,26,.85);border:1px solid var(--line);
+    border-radius:10px;padding:10px 12px;color:var(--ink);font-size:13px;font-family:inherit;outline:none}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--frog1)}
+  .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:600px){.frow{grid-template-columns:1fr}}
+  .payopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px}
+  .pay{border:1px solid var(--line);border-radius:11px;padding:11px;text-align:center;cursor:pointer;font-size:12.5px;transition:all .2s}
+  .pay:hover{border-color:var(--cyan)}
+  .pay.on{border-color:var(--frog1);background:rgba(255,217,77,.12);box-shadow:0 0 14px rgba(255,217,77,.25)}
+  .pay b{display:block;font-size:19px;margin-bottom:4px}
+  .orderlist{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:14px}
+  .orderlist .oi{display:flex;align-items:center;gap:10px;padding:9px 12px;font-size:12.5px;border-bottom:1px solid rgba(42,58,106,.4)}
+  .orderlist .oi:last-child{border-bottom:none}
+  .orderlist .oi .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .orderlist .oi .p{color:var(--red);font-weight:800;font-family:Consolas,monospace}
+  .orderlist .oi .q{color:var(--muted)}
+  .success{text-align:center;padding:14px 0}
+  .success .big{font-size:60px;animation:hop 1.4s ease-in-out infinite}
+  .success h2{font-size:21px;margin:12px 0 8px;color:var(--green)}
+  .success p{font-size:13px;color:var(--muted);line-height:1.9;max-width:440px;margin:0 auto}
+
+  /* ============ 我的订单 ============ */
+  .ordercard{border:1px solid var(--line);border-radius:13px;padding:13px 16px;margin-bottom:11px;background:rgba(16,22,48,.55)}
+  .ordercard .oh{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-bottom:8px;flex-wrap:wrap;gap:8px}
+  .ordercard .oh b{color:var(--frog1);font-family:Consolas,monospace}
+  .ordercard .ob{font-size:12.5px;line-height:1.9}
+  .ordercard .st{font-size:11.5px;color:var(--green);font-weight:800}
+
+  .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(22px);z-index:300;
+    background:rgba(13,20,48,.97);border:1px solid var(--green);color:var(--green);font-size:13px;font-weight:700;
+    padding:12px 26px;border-radius:30px;opacity:0;transition:all .3s;pointer-events:none;box-shadow:0 10px 40px rgba(0,0,0,.6)}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{border-color:var(--red);color:var(--red)}
 
-  footer{text-align:center;color:var(--muted);font-size:12px;padding:20px 10px 40px;line-height:1.9;position:relative;z-index:2}
-  .disclaimer{border:1px solid rgba(255,217,77,.25);border-radius:12px;display:inline-block;padding:8px 18px;background:rgba(255,217,77,.04)}
+  footer{text-align:center;color:var(--muted);font-size:11.5px;padding:22px 12px 50px;line-height:1.9;position:relative;z-index:2}
+  .disclaimer{border:1px solid rgba(255,217,77,.25);border-radius:12px;display:inline-block;padding:9px 20px;background:rgba(255,217,77,.04)}
+  .backtop{position:fixed;right:22px;bottom:22px;z-index:90;width:50px;height:50px;border-radius:50%;
+    background:linear-gradient(135deg,#22d3ee,#ffd94d);border:none;font-size:21px;cursor:pointer;
+    box-shadow:0 0 26px rgba(34,211,238,.5);opacity:0;pointer-events:none;transition:all .3s}
+  .backtop.show{opacity:1;pointer-events:auto}
 </style>
 </head>
 <body>
 <canvas id="netbg"></canvas>
 
-<header>
-  <h1>🛒 奶蛙购</h1>
-  <div class="subtitle">奶蛙官方周边商城 · 诞辰庆典全场限时福利</div>
-</header>
+<!-- 顶部：搜索（淘宝式） -->
+<div class="topbar">
+  <div class="logo"><img src="naiwa.webp" alt="奶蛙"><span>奶蛙购</span></div>
+  <div class="search">
+    <input id="q" type="search" placeholder="搜索：手办 / 贴纸 / 抱枕 / 齁齁齁……" autocomplete="off">
+    <button id="searchBtn">🔍 搜索</button>
+    <div class="hotwords">
+      <b data-w="手办">手办</b><b data-w="贴纸">贴纸</b><b data-w="抱枕">抱枕</b>
+      <b data-w="T恤">T恤</b><b data-w="限定">限定</b><b data-w="秒杀">秒杀</b>
+    </div>
+  </div>
+  <div class="topacts">
+    <button class="tbtn" id="myOrders">📦 我的订单</button>
+    <button class="tbtn" id="cartFab">🛒 购物车<span class="dot" id="cartCount">0</span></button>
+  </div>
+</div>
 
-<nav><div class="inner">
-  <a href="index.html">📊 观测站</a>
-  <a href="race.html">🏎️ 奶蛙赛车</a>
-  <a href="battle.html">⚔️ 奶蛙决斗</a>
-  <a href="shop.html" class="hot">🛒 奶蛙购</a>
-</div></nav>
+<nav data-naiwa-nav><div class="inner"></div></nav>
 
 <div class="wrap">
-  <div class="banner">
-    <img src="naiwa-standing.webp" alt="奶蛙">
+  <!-- 秒杀 -->
+  <div class="flash">
+    <img src="naiwa-smiling.webp" alt="奶蛙">
     <div>
-      <h3>🎂 诞辰庆典 · 全场第二件半价</h3>
-      <p>所有周边由奶蛙本体亲自监工 · 每一件都经过「齁齁齁」质检</p>
+      <div class="t1">⚡ 诞辰秒杀 · 每秒都在变便宜</div>
+      <div class="t2">限时抢购，抢完即止 · 全场由奶蛙本体亲自「齁齁齁」质检</div>
     </div>
-    <div class="off">5折起</div>
+    <div class="cd">距结束 <b id="cdH">00</b><i>:</i><b id="cdM">00</b><i>:</i><b id="cdS">00</b></div>
   </div>
 
-  <div class="cats" id="cats">
-    <button class="on" data-c="all">全部</button>
-    <button data-c="sticker">表情包周边</button>
-    <button data-c="figure">手办模型</button>
-    <button data-c="clothes">服饰穿搭</button>
-    <button data-c="life">生活用品</button>
+  <!-- 优惠券 -->
+  <div class="coupons" id="coupons"></div>
+
+  <div class="layout">
+    <!-- 左侧筛选 -->
+    <aside class="side">
+      <h3>🗂️ 商品分类 <span id="catCnt"></span></h3>
+      <div class="cat" id="cats"></div>
+      <h3>💰 价格区间</h3>
+      <div class="pricebox">
+        <input id="pmin" type="number" placeholder="最低" min="0">
+        <span>—</span>
+        <input id="pmax" type="number" placeholder="最高" min="0">
+      </div>
+      <button class="apply" id="applyPrice">应用价格筛选</button>
+      <h3 style="margin-top:16px">🏷️ 服务保障</h3>
+      <div style="font-size:11.5px;color:var(--muted);line-height:2">
+        ✅ 七天无理由退货<br>✅ 假一赔十（本来就是假的）<br>✅ 奶蛙亲自发货<br>✅ 全国包邮（除南极）
+      </div>
+    </aside>
+
+    <!-- 商品区 -->
+    <main class="main">
+      <div class="sortbar">
+        <button data-s="default" class="on">综合</button>
+        <button data-s="sales">销量</button>
+        <button data-s="priceUp">价格 ↑</button>
+        <button data-s="priceDown">价格 ↓</button>
+        <button data-s="rating">好评</button>
+        <button data-s="discount">折扣</button>
+        <span class="cnt">共 <b id="resCnt">0</b> 件商品</span>
+      </div>
+      <div class="grid" id="grid"></div>
+    </main>
   </div>
-
-  <div class="grid" id="grid"></div>
 </div>
 
-<button class="cart-fab" id="cartFab">🛒<span class="count" id="cartCount">0</span></button>
-<div class="overlay" id="overlay"></div>
-<div class="cart-drawer" id="cartDrawer">
-  <h3>购物车 <button id="closeCart">×</button></h3>
-  <div id="cartItems"></div>
-  <div class="cart-total"><span>合计</span><span id="cartTotal">¥0.00</span></div>
-  <button class="checkout-btn" id="checkoutBtn">🐸 去结算（奶蛙付不起） </button>
+<!-- 详情 -->
+<div class="modal" id="detail"><div class="mask" data-close="1"></div><div class="box" id="detailBox"></div></div>
+<!-- 结算 -->
+<div class="modal" id="checkout"><div class="mask" data-close="1"></div><div class="box" id="ckBox"></div></div>
+<!-- 订单 -->
+<div class="modal" id="orders"><div class="mask" data-close="1"></div><div class="box" id="ordBox"></div></div>
+
+<!-- 购物车 -->
+<div class="drawer" id="cartDrawer">
+  <div class="dh"><h3>🛒 购物车 <span id="cartTip" style="font-size:11.5px;color:var(--muted);font-weight:400"></span></h3><button data-close="cart">×</button></div>
+  <div class="dbody" id="cartItems"></div>
+  <div class="dfoot">
+    <div class="sumrow"><span>商品合计</span><span id="sumGoods">¥0.00</span></div>
+    <div class="sumrow save"><span>优惠券</span><span id="sumCoupon">-¥0.00</span></div>
+    <div class="sumrow"><span>运费</span><span id="sumShip">包邮</span></div>
+    <div class="sumrow total"><span>应付总额</span><span id="sumTotal">¥0.00</span></div>
+    <button class="ckbtn" id="toCheckout">去结算</button>
+  </div>
 </div>
+
 <div class="toast" id="toast">已加入购物车！</div>
+<button class="backtop" id="backtop">↑</button>
 
 <footer>
-  <div class="disclaimer">🐸 本站为庆祝奶蛙诞生而建 · 所有商品为虚拟展示，不支持真实下单（奶蛙的钱包也是表情包做的）</div>
+  <div class="disclaimer">🐸 本站为庆祝奶蛙诞生而建 · 所有商品为虚拟展示，不产生真实交易（奶蛙的钱包也是表情包做的）</div>
 </footer>
 
+<script src="naiwa-common.js"></script>
 <script>
-/* ================= 背景粒子 ================= */
-(function(){
-  const cv=document.getElementById("netbg"),ctx=cv.getContext("2d");
-  let W,H,pts=[];
-  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;
-    pts=Array.from({length:Math.min(70,W*H/20000)},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4}));}
-  resize();addEventListener("resize",resize);
-  (function tick(){
-    ctx.clearRect(0,0,W,H);
-    for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;
-      ctx.fillStyle="rgba(255,217,77,.5)";ctx.beginPath();ctx.arc(p.x,p.y,1.3,0,7);ctx.fill();}
-    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
-      const a=pts[i],b=pts[j],d=Math.hypot(a.x-b.x,a.y-b.y);
-      if(d<120){ctx.strokeStyle=`rgba(34,211,238,${(1-d/120)*.22})`;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
-    }
-    requestAnimationFrame(tick);
-  })();
-})();
+/* ============================================================
+   🛒 奶蛙购 v2 · 淘宝式商城模块
+   搜索 / 多维筛选 / 排序 / 详情 / SKU / 优惠券 / 购物车 / 三段式结算 / 订单
+   ============================================================ */
+(function () {
+"use strict";
+var $ = function (id) { return document.getElementById(id); };
+var fmt = NAIWA.fmt;
 
-/* ================= 商品数据 ================= */
-const products=[
-  {id:1,c:"sticker",name:"奶蛙思考贴纸包",img:"naiwa-thinking.webp",price:9.9,old:19.9,sold:"2.3万",desc:"一包 30 张，「让我想想」万能回复，贴满你的工位。",badge:"new"},
-  {id:2,c:"sticker",name:"奶蛙大笑鼠标垫",img:"naiwa-smiling.webp",price:19.9,old:39.9,sold:"1.8万",desc:"每天打开电脑，被「齁齁齁」治愈一次。"},
-  {id:3,c:"figure",name:"奶蛙大胖手办",img:"naiwa-standing.webp",price:99,old:199,sold:"8600",desc:"1:1 还原梨形身材，小头大肚，看透一切的眼神。",badge:"热"},
-  {id:4,c:"figure",name:"金色奶蛙雕像",emoji:"🐸",price:299,old:999,sold:"328",desc:"传说款！999 足金（假的），摆在家里招财（心情好就行）。",badge:"限定"},
-  {id:5,c:"clothes",name:"奶蛙T恤·齁齁齁",emoji:"👕",price:59,old:99,sold:"5.2万",desc:"胸前一排「齁齁齁」，谁穿谁是整条街最抽象的仔。"},
-  {id:6,c:"clothes",name:"奶蛙睡帽",emoji:"🎩",price:29.9,old:59.9,sold:"9800",desc:"戴上就能梦见奶蛙在对你笑（也可能会做噩梦）。"},
-  {id:7,c:"life",name:"奶蛙马克杯",emoji:"☕",price:39.9,old:79.9,sold:"3.1万",desc:"杯底藏一只小奶蛙，喝完水它浮出水面跟你打招呼。",badge:"new"},
-  {id:8,c:"life",name:"奶蛙抱枕·大号",emoji:"🛏️",price:89,old:169,sold:"1.2万",desc:"抱着就像抱着一整个网络情绪容器，软软的，很安心。"},
-  {id:9,c:"sticker",name:"奶蛙冰箱贴套装",emoji:"🧲",price:15.9,old:29.9,sold:"6700",desc:"思考/站立/大笑三种姿态，冰箱从此有了灵魂。"},
-  {id:10,c:"figure",name:"迷你奶蛙挂件",emoji:"🔑",price:19.9,old:39.9,sold:"4.4万",desc:"挂在钥匙上，每次开门都有人（蛙）对你笑。"}
+/* ---------------- 商品数据（含 SKU、规格、评价） ---------------- */
+var CATS = [
+  { id: "all",     name: "全部商品", icon: "🌐" },
+  { id: "figure",  name: "手办模型", icon: "🗿" },
+  { id: "sticker", name: "表情周边", icon: "🎴" },
+  { id: "clothes", name: "服饰穿搭", icon: "👕" },
+  { id: "life",    name: "生活用品", icon: "🏠" },
+  { id: "digital", name: "数字藏品", icon: "💾" },
+  { id: "food",    name: "奶蛙食品", icon: "🍬" }
 ];
 
-/* ================= 购物车 ================= */
-let cart={};
-const grid=document.getElementById("grid");
-const cartCount=document.getElementById("cartCount");
-const cartItems=document.getElementById("cartItems");
-const cartTotal=document.getElementById("cartTotal");
-const toast=document.getElementById("toast");
-let curCat="all";
+var REVIEW_POOL = [
+  { n: "齁齁齁", t: "收到货直接笑出声，室友以为我疯了。质量比想象中好太多！", s: 5 },
+  { n: "容我三思", t: "想了三天才下单，到手发现应该早点买。", s: 5 },
+  { n: "奶蛙本体", t: "这就是我本人，好评。", s: 5 },
+  { n: "打工人小王", t: "放工位上被同事围观了一整天，值。", s: 4 },
+  { n: "不吃香菜", t: "物流很快，包装很奶蛙，就是快递盒被压了。", s: 4 },
+  { n: "抽象大师", t: "抽象程度满分，家里已经快放不下了。", s: 5 },
+  { n: "夜猫子", t: "凌晨三点下的单，第二天就到了，怀疑奶蛙住我家楼下。", s: 5 },
+  { n: "理性消费者", t: "价格偏贵，但看在这只蛙的面子上还是买了。", s: 3 }
+];
 
-function render(){
-  const list=products.filter(p=>curCat==="all"||p.c===curCat);
-  grid.innerHTML=list.map(p=>`
-    <div class="card">
-      ${p.badge?`<div class="badge ${p.badge==="new"?"new":""}">${p.badge}</div>`:""}
-      <div class="img">${p.img?`<img src="${p.img}" alt="${p.name}">`:`<div class="emoji">${p.emoji}</div>`}</div>
-      <h4>${p.name}</h4>
-      <div class="desc">${p.desc}</div>
-      <div class="price-row">
-        <span class="price">¥${p.price}<small>¥${p.old}</small></span>
-        <span class="sold">已售${p.sold}</span>
-      </div>
-      <button class="add-btn" onclick="addToCart(${p.id},this)">🛒 加入购物车</button>
-    </div>`).join("");
+function P(id, cat, name, price, old, sold, emoji, desc, tags, extra) {
+  var o = {
+    id: id, c: cat, name: name, price: price, old: old, sold: sold, emoji: emoji,
+    desc: desc, tags: tags || [], rating: (4.4 + Math.random() * .6),
+    reviews: Math.floor(120 + Math.random() * 4000),
+    stock: Math.floor(20 + Math.random() * 380),
+    specs: {
+      "品牌": "NAIWA 奶蛙官方",
+      "产地": "奶蛙星 · 大黄梨区",
+      "保质期": "永久（情绪价值不腐坏）",
+      "发货地": "数据流中转仓"
+    },
+    skus: null, tint: null, badge: null, reviewList: null
+  };
+  if (extra) for (var k in extra) o[k] = extra[k];
+  return o;
 }
-render();
 
-document.querySelectorAll("#cats button").forEach(b=>{
-  b.addEventListener("click",()=>{
-    document.querySelectorAll("#cats button").forEach(x=>x.classList.remove("on"));
-    b.classList.add("on");curCat=b.dataset.c;render();
-  });
+var PRODUCTS = [
+  P(1, "figure", "奶蛙大胖手办 1:1 还原", 99, 199, 8642, "🗿",
+    "1:1 还原梨形身材，小头大肚，看透一切的眼神。底座带声控灯，摸一下会说「齁齁齁」。",
+    ["限定发售", "带灯光底座", "1:1还原"], { badge: "hot", tint: "#ffd94d", src: "naiwa-standing.webp",
+    skus: [{ n: "标准版 18cm", p: 0 }, { n: "豪华版 28cm + 灯光底座", p: 120 }, { n: "典藏版 45cm 限量签名", p: 480 }] }),
+  P(2, "figure", "金色奶蛙雕像 · 招财限定", 299, 999, 328, "🏆",
+    "传说款！999 足金（假的），摆在家里招财（心情好就行）。附赠擦拭布与「发财」护身符。",
+    ["限量 500 体", "编号证书", "礼盒装"], { badge: "限定", tint: "#ffb300", src: "naiwa-standing.webp",
+    skus: [{ n: "镀金版 22cm", p: 0 }, { n: "真金电镀 + 亚克力罩", p: 260 }] }),
+  P(3, "figure", "迷你奶蛙挂件 · 三姿态套装", 19.9, 39.9, 44231, "🔑",
+    "思考 / 站立 / 大笑三种姿态，挂在钥匙上，每次开门都有人（蛙）对你笑。软胶材质，捏不烂。",
+    ["三只装", "软胶", "热销第一"], { badge: "爆款", tint: "#7ec850", src: "naiwa-thinking.webp" }),
+  P(4, "figure", "奶蛙之神 巨型雕像", 1299, 2599, 76, "👑",
+    "1.2 米高，自带 RGB 呼吸灯与环绕音效。放在客厅，来客必问「这是什么」。",
+    ["1.2米", "RGB灯效", "镇宅之宝"], { badge: "顶配", tint: "#ffffff", src: "naiwa.webp",
+    skus: [{ n: "标准 1.2m", p: 0 }, { n: "豪华 1.8m + 音效模块", p: 1500 }] }),
+
+  P(5, "sticker", "奶蛙思考贴纸包（30 张）", 9.9, 19.9, 23120, "🎴",
+    "「让我想想」万能回复，贴满你的工位。防水哑光膜，撕下不留胶。",
+    ["30张", "防水", "万能回复"], { badge: "new", tint: "#5aa8ff", src: "naiwa-thinking.webp" }),
+  P(6, "sticker", "奶蛙大笑鼠标垫 超大号", 19.9, 39.9, 18240, "🖱️",
+    "每天打开电脑，被「齁齁齁」治愈一次。90×40cm，锁边工艺，不卷边。",
+    ["90×40cm", "锁边", "防滑底"], { tint: "#ffd94d", src: "naiwa-smiling.webp" }),
+  P(7, "sticker", "奶蛙冰箱贴套装", 15.9, 29.9, 6771, "🧲",
+    "思考 / 站立 / 大笑三种姿态，冰箱从此有了灵魂。强磁不脱落。",
+    ["三只装", "强磁", "可水洗"], { tint: "#ff6ec7", src: "naiwa-standing.webp" }),
+  P(8, "sticker", "奶蛙表情包扑克牌", 25.9, 49.9, 3120, "🃏",
+    "54 张全是不重样的奶蛙表情，打牌时先笑为敬。附收纳铁盒。",
+    ["54张", "铁盒装", "聚会神器"], { tint: "#8a6bff", src: "naiwa-smiling.webp" }),
+
+  P(9, "clothes", "奶蛙 T 恤 · 齁齁齁印花", 59, 99, 52140, "👕",
+    "胸前一排「齁齁齁」，谁穿谁是整条街最抽象的仔。260g 重磅纯棉，不透不变形。",
+    ["重磅纯棉", "男女同款", "5色可选"], { tint: "#ffd94d", src: "naiwa-smiling.webp",
+    skus: [{ n: "黑色 S", p: 0 }, { n: "黑色 M", p: 0 }, { n: "黑色 L", p: 0 }, { n: "白色 M", p: 0 }, { n: "白色 XL", p: 10 }] }),
+  P(10, "clothes", "奶蛙睡帽 · 会做梦的那种", 29.9, 59.9, 9821, "🎩",
+    "戴上就能梦见奶蛙在对你笑（也可能会做噩梦）。加绒内里，冬天很暖。",
+    ["加绒", "均码", "冬日限定"], { tint: "#7ec850", src: "naiwa-standing.webp" }),
+  P(11, "clothes", "奶蛙连帽卫衣 · 大肚款", 129, 259, 4310, "🧥",
+    "正面大肚子立体印花，坐下时图案会「鼓起来」。360g 加厚抓绒。",
+    ["加厚抓绒", "立体印花", "情侣款"], { badge: "热", tint: "#22d3ee", src: "naiwa.webp" }),
+  P(12, "clothes", "奶蛙洞洞鞋 · 装饰扣套装", 89, 159, 12490, "🩴",
+    "鞋面可插 12 个奶蛙装饰扣，走路时它们会一起点头。轻量 EVA。",
+    ["含12个扣", "轻量EVA", "可拆卸"], { badge: "new", tint: "#ff8ac8", src: "naiwa-smiling.webp" }),
+
+  P(13, "life", "奶蛙马克杯 · 杯底藏蛙", 39.9, 79.9, 31204, "☕",
+    "杯底藏一只小奶蛙，喝完水它浮出水面跟你打招呼。陶瓷釉下彩，可进微波炉。",
+    ["400ml", "釉下彩", "微波可用"], { badge: "new", tint: "#5aa8ff", src: "naiwa-thinking.webp" }),
+  P(14, "life", "奶蛙抱枕 · 大号 60cm", 89, 169, 12430, "🛏️",
+    "抱着就像抱着一整个网络情绪容器，软软的，很安心。填充高回弹 PP 棉。",
+    ["60cm", "高回弹", "可拆洗"], { tint: "#ffd94d", src: "naiwa.webp",
+    skus: [{ n: "40cm 小号", p: -40 }, { n: "60cm 标准", p: 0 }, { n: "90cm 巨无霸", p: 110 }] }),
+  P(15, "life", "奶蛙雨伞 · 泪之瀑布款", 69, 129, 3120, "☂️",
+    "伞面印着瀑布般的眼泪，下雨天撑开格外应景。全自动防风骨。",
+    ["全自动", "防风十骨", "防晒UPF50+"], { tint: "#22d3ee", src: "naiwa-thinking.webp" }),
+  P(16, "life", "奶蛙香薰蜡烛 · 奶糖味", 49.9, 99, 7640, "🕯️",
+    "点燃后整个房间都是奶糖味，据说能提升 30% 的「齁齁齁」欲望。大豆蜡。",
+    ["大豆蜡", "燃烧40h", "奶糖香调"], { tint: "#ff8ac8", src: "naiwa-smiling.webp" }),
+
+  P(17, "digital", "奶蛙表情包 · 永久授权", 12.9, 29.9, 88210, "💾",
+    "含 320 张高清表情 + 4 套动态贴纸，永久更新。付款后立即发放兑换码。",
+    ["320张", "永久更新", "即时到货"], { badge: "爆款", tint: "#7ec850", src: "naiwa-thinking.webp" }),
+  P(18, "digital", "奶蛙音效包 · 齁齁齁系列", 19.9, 39.9, 21430, "🎵",
+    "48 个高保真音效：笑、哭、装死、翻滚、被踩。适合剪辑与直播。",
+    ["48个音效", "无损wav", "可商用"], { tint: "#8a6bff", src: "naiwa-smiling.webp" }),
+  P(19, "digital", "奶蛙壁纸集 · 4K 超清 120 张", 9.9, 19.9, 45120, "🖼️",
+    "手机 / 电脑 / 平板全尺寸适配，120 张不重样。",
+    ["120张", "4K", "全尺寸"], { tint: "#22d3ee", src: "naiwa.webp" }),
+
+  P(20, "food", "奶蛙棉花糖 · 齁齁齁味", 29.9, 49.9, 18230, "🍬",
+    "入口即化，甜到发出「齁齁齁」。独立小包装，办公室摸鱼必备。",
+    ["20袋", "独立包装", "0反式脂肪"], { badge: "new", tint: "#ff8ac8", src: "naiwa-smiling.webp" }),
+  P(21, "food", "奶蛙曲奇礼盒 · 诞辰限定", 79, 158, 4210, "🍪",
+    "16 枚手工曲奇，每枚压印一个奶蛙表情。附赠贺卡。",
+    ["16枚", "手工烘焙", "礼盒装"], { badge: "限定", tint: "#ffb300", src: "naiwa.webp" }),
+  P(22, "food", "奶蛙气泡水 · 一箱 24 罐", 59, 119, 9120, "🥤",
+    "0 糖 0 卡，气泡足到打嗝都是「齁」。柠檬 / 白桃双味混装。",
+    ["24罐", "0糖0卡", "双味混装"], { tint: "#5aa8ff", src: "naiwa-thinking.webp" })
+];
+
+/* 生成评价列表 */
+PRODUCTS.forEach(function (p) {
+  var n = 3 + Math.floor(Math.random() * 3);
+  p.reviewList = [];
+  for (var i = 0; i < n; i++) p.reviewList.push(REVIEW_POOL[(p.id + i) % REVIEW_POOL.length]);
 });
 
-function addToCart(id,btn){
-  cart[id]=(cart[id]||0)+1;
-  btn.classList.add("added");btn.textContent="✓ 已加入";
-  setTimeout(()=>{btn.classList.remove("added");btn.textContent="🛒 加入购物车";},900);
-  toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),1500);
-  updateCart();
-}
-window.addToCart=addToCart;
-
-function updateCart(){
-  const ids=Object.keys(cart);
-  cartCount.textContent=ids.reduce((s,k)=>s+cart[k],0);
-  if(!ids.length){cartItems.innerHTML='<div class="cart-empty">购物车空空如也<br>奶蛙正在看着你……</div>';cartTotal.textContent="¥0.00";return;}
-  cartItems.innerHTML=ids.map(id=>{
-    const p=products.find(x=>x.id==id);
-    return `<div class="cart-item">
-      ${p.img?`<img src="${p.img}" alt="">`:`<div style="font-size:32px;width:44px;text-align:center">${p.emoji}</div>`}
-      <div class="info"><h5>${p.name}</h5><span>¥${p.price}</span></div>
-      <div class="qty">
-        <button onclick="chgQty(${id},-1)">−</button><b>${cart[id]}</b><button onclick="chgQty(${id},1)">+</button>
-      </div>
-    </div>`;
-  }).join("");
-  const total=ids.reduce((s,k)=>s+cart[k]*products.find(x=>x.id==k).price,0);
-  cartTotal.textContent="¥"+total.toFixed(2);
-}
-window.chgQty=function(id,d){
-  cart[id]+=d;if(cart[id]<=0)delete cart[id];updateCart();
+/* ---------------- 状态 ---------------- */
+var st = {
+  cat: "all", sort: "default", q: "", pmin: null, pmax: null,
+  cart: NAIWA.store.get("shop:cart", {}),       // { "id::skuIdx": qty }
+  coupons: NAIWA.store.get("shop:coupons", []),
+  orders: NAIWA.store.get("shop:orders", []),
+  activeCoupon: null,
+  flashLeft: 3 * 3600 + 42 * 60 + 12
 };
 
-const drawer=document.getElementById("cartDrawer"),overlay=document.getElementById("overlay");
-document.getElementById("cartFab").addEventListener("click",()=>{drawer.classList.add("open");overlay.classList.add("open");updateCart();});
-document.getElementById("closeCart").addEventListener("click",()=>{drawer.classList.remove("open");overlay.classList.remove("open");});
-overlay.addEventListener("click",()=>{drawer.classList.remove("open");overlay.classList.remove("open");});
+/* ---------------- 优惠券 ---------------- */
+var COUPONS = [
+  { id: "c5",  v: 5,   min: 30,  name: "满 30 减 5" },
+  { id: "c15", v: 15,  min: 99,  name: "满 99 减 15" },
+  { id: "c40", v: 40,  min: 259, name: "满 259 减 40" },
+  { id: "c99", v: 99,  min: 599, name: "满 599 减 99" },
+  { id: "c200", v: 200, min: 1299, name: "满 1299 减 200" }
+];
+function renderCoupons() {
+  $("coupons").innerHTML = COUPONS.map(function (c) {
+    var got = st.coupons.indexOf(c.id) >= 0;
+    return '<div class="cp' + (got ? " got" : "") + '" data-cp="' + c.id + '">' +
+      "<b>¥" + c.v + "</b><span>" + c.name + (got ? " · 已领取" : " · 点击领取") + "</span></div>";
+  }).join("");
+  NAIWA.$$("#coupons .cp").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var id = el.dataset.cp;
+      if (st.coupons.indexOf(id) >= 0) { toast("这张券已经领过啦", "#8b93c8"); return; }
+      st.coupons.push(id); NAIWA.store.set("shop:coupons", st.coupons);
+      NAIWA.audio.coin(); renderCoupons(); toast("🎫 领取成功：" + couponById(id).name, "#7ec850");
+    });
+  });
+}
+function couponById(id) { for (var i = 0; i < COUPONS.length; i++) if (COUPONS[i].id === id) return COUPONS[i]; return null; }
+/** 选中最优可用券 */
+function bestCoupon(total) {
+  var best = null;
+  st.coupons.forEach(function (id) {
+    var c = couponById(id);
+    if (c && total >= c.min && (!best || c.v > best.v)) best = c;
+  });
+  return best;
+}
 
-document.getElementById("checkoutBtn").addEventListener("click",()=>{
-  if(!Object.keys(cart).length){toast.textContent="购物车是空的！";toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),1500);return;}
-  toast.textContent="🐸 奶蛙说：你的心意我收下了，钱就免了～";
-  toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),2500);
+/* ---------------- 商品展示 ---------------- */
+var spriteCache = {};
+function productSprite(p) {
+  if (spriteCache[p.id]) return spriteCache[p.id];
+  var cv = document.createElement("canvas");
+  cv.width = 220; cv.height = 220;
+  var c = cv.getContext("2d");
+  var src = p.src || "naiwa-standing.webp";
+  var sp = NAIWA.tintSprite(src, p.tint || "#ffd94d", { alpha: .55, size: 220 });
+  c.drawImage(sp, 0, 0, 220, 220);
+  /* 数字/食品类商品叠一个 emoji 标 */
+  if (p.c === "digital" || p.c === "food" || p.c === "sticker") {
+    c.font = "58px serif"; c.textAlign = "center"; c.textBaseline = "middle";
+    c.globalAlpha = .95;
+    c.fillText(p.emoji, 110, 190);
+  }
+  spriteCache[p.id] = cv;
+  return cv;
+}
+function productImgHTML(p, size) {
+  var cv = productSprite(p);
+  return '<img src="' + cv.toDataURL("image/png") + '" alt="' + p.name + '" loading="lazy">';
+}
+
+function discount(p) {
+  if (!p.old || p.old <= p.price) return 0;
+  return Math.round((1 - p.price / p.old) * 100);
+}
+
+function filtered() {
+  var list = PRODUCTS.filter(function (p) {
+    if (st.cat !== "all" && p.c !== st.cat) return false;
+    if (st.pmin !== null && p.price < st.pmin) return false;
+    if (st.pmax !== null && p.price > st.pmax) return false;
+    if (st.q) {
+      var t = (p.name + p.desc + p.tags.join(" ") + p.emoji + p.c).toLowerCase();
+      if (t.indexOf(st.q.toLowerCase()) < 0) return false;
+    }
+    return true;
+  });
+  var s = st.sort;
+  list.sort(function (a, b) {
+    if (s === "sales") return b.sold - a.sold;
+    if (s === "priceUp") return a.price - b.price;
+    if (s === "priceDown") return b.price - a.price;
+    if (s === "rating") return b.rating - a.rating;
+    if (s === "discount") return discount(b) - discount(a);
+    return b.sold * b.rating - a.sold * a.rating;
+  });
+  return list;
+}
+
+function renderCats() {
+  var counts = { all: PRODUCTS.length };
+  PRODUCTS.forEach(function (p) { counts[p.c] = (counts[p.c] || 0) + 1; });
+  $("cats").innerHTML = CATS.map(function (c) {
+    return '<button data-c="' + c.id + '" class="' + (st.cat === c.id ? "on" : "") + '">' +
+      "<span>" + c.icon + " " + c.name + "</span><i>" + (counts[c.id] || 0) + "</i></button>";
+  }).join("");
+  NAIWA.$$("#cats button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      st.cat = b.dataset.c; NAIWA.audio.select(); renderCats(); renderGrid();
+    });
+  });
+  $("catCnt").textContent = PRODUCTS.length + " 件在售";
+}
+
+function renderGrid() {
+  var list = filtered();
+  $("resCnt").textContent = list.length;
+  if (!list.length) {
+    $("grid").innerHTML = '<div class="empty"><b>🐸</b>没有找到符合条件的商品<br>试试换个关键词，或清空价格筛选</div>';
+    return;
+  }
+  $("grid").innerHTML = list.map(function (p) {
+    var d = discount(p);
+    var stockPct = Math.min(100, Math.max(6, p.stock / 4));
+    return '<div class="card" data-id="' + p.id + '">' +
+      (p.badge ? '<div class="flag ' + (p.badge === "new" ? "new" : p.badge === "hot" || p.badge === "爆款" ? "hot" : "") + '">' + p.badge + '</div>' : "") +
+      (d ? '<div class="off">-' + d + '%</div>' : "") +
+      '<div class="imgwrap">' + productImgHTML(p) + '</div>' +
+      '<div class="body">' +
+        '<h4>' + (p.badge ? "<em>奶蛙购</em>" : "") + p.name + '</h4>' +
+        '<div class="tags">' + p.tags.map(function (t) { return "<span>" + t + "</span>"; }).join("") + '</div>' +
+        '<div class="rating">⭐ <b>' + p.rating.toFixed(1) + '</b> · ' + fmt(p.reviews) + ' 条评价</div>' +
+        '<div class="prow"><span class="price"><i>¥</i>' + p.price + '</span>' +
+          (p.old ? '<span class="old">¥' + p.old + '</span>' : "") +
+          '<span class="sold">已售 ' + fmt(p.sold) + '</span></div>' +
+        '<div class="stockbar"><i style="width:' + stockPct + '%"></i></div>' +
+        '<div class="stocktxt"><span>剩余 ' + p.stock + ' 件</span><span>' + (stockPct < 30 ? "🔥 快抢完了" : "现货充足") + '</span></div>' +
+        '<div class="act"><button class="add" data-add="' + p.id + '">🛒 加购</button>' +
+        '<button class="buy" data-buy="' + p.id + '">⚡ 立即买</button></div>' +
+      '</div></div>';
+  }).join("");
+
+  /* 绑定 */
+  NAIWA.$$("#grid .card").forEach(function (card) {
+    var id = +card.dataset.id;
+    card.addEventListener("click", function (e) {
+      if (e.target.closest("button")) return;
+      openDetail(id);
+    });
+  });
+  NAIWA.$$("#grid [data-add]").forEach(function (b) {
+    b.addEventListener("click", function (e) { e.stopPropagation(); addToCart(+b.dataset.add, 0, 1, b); });
+  });
+  NAIWA.$$("#grid [data-buy]").forEach(function (b) {
+    b.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var id = +b.dataset.buy;
+      openDetail(id, true);
+    });
+  });
+}
+
+/* ---------------- 详情 ---------------- */
+var detailState = { id: null, sku: 0, qty: 1 };
+function openDetail(id, buyNow) {
+  var p = PRODUCTS.filter(function (x) { return x.id === id; })[0];
+  if (!p) return;
+  detailState = { id: id, sku: 0, qty: buyNow ? 1 : 1 };
+  var d = discount(p);
+  $("detailBox").innerHTML =
+    '<button class="close" data-close="detail">×</button>' +
+    '<div class="dt">' +
+      '<div class="big">' + productImgHTML(p) + '<div class="zoombadge">🔍 奶蛙官方图</div></div>' +
+      '<div>' +
+        '<h2>' + (p.badge ? "<em>" + p.badge + "</em>" : "") + p.name + '</h2>' +
+        '<div class="sub">' + p.desc + '</div>' +
+        '<div class="pbox">' +
+          '<span class="now"><i>¥</i>' + p.price + '</span>' +
+          (p.old ? '<span class="old">¥' + p.old + '</span><span class="save">立省 ¥' + (p.old - p.price).toFixed(2) + '（' + d + '% off）</span>' : "") +
+          '<div class="row2"><span>⚡ 秒杀价</span><span>🚚 包邮</span><span>🛡️ 7天无理由</span><span>⭐ ' + p.rating.toFixed(1) + ' 分</span></div>' +
+        '</div>' +
+        (p.skus ? '<div class="field"><label>选择规格</label><div class="payopts" id="skuOpts">' +
+          p.skus.map(function (s, i) { return '<div class="pay' + (i === 0 ? " on" : "") + '" data-sku="' + i + '"><b style="font-size:12.5px">' + s.n + '</b>¥' + (p.price + s.p).toFixed(2) + '</div>'; }).join("") +
+          "</div></div>" : "") +
+        '<div class="spec">' +
+          Object.keys(p.specs).map(function (k) { return '<span class="k">' + k + '</span><span class="v">' + p.specs[k] + "</span>"; }).join("") +
+          '<span class="k">库存</span><span class="v">' + p.stock + " 件</span>" +
+          '<span class="k">已售</span><span class="v">' + fmt(p.sold) + " 件</span>" +
+        "</div>" +
+        '<div class="qtyrow">数量' +
+          '<div class="q"><button data-q="-1">−</button><b id="dq">1</b><button data-q="1">+</button></div>' +
+          '<span id="subTotal" style="color:var(--red);font-weight:800;font-family:Consolas,monospace"></span>' +
+        "</div>" +
+        '<div class="buys">' +
+          '<button class="b1" id="dAdd">🛒 加入购物车</button>' +
+          '<button class="b2" id="dBuy">⚡ 立即购买</button>' +
+        "</div>" +
+      "</div>" +
+    "</div>" +
+    '<div class="reviews"><h3>💬 用户评价 <span>' + fmt(p.reviews) + ' 条 · 好评率 ' + Math.round(p.rating / 5 * 100) + '%</span></h3>' +
+      p.reviewList.map(function (r) {
+        return '<div class="rv"><div class="av">🐸</div><div class="rc">' +
+          '<div class="rn"><b>' + r.n + '</b> <span class="stars">' + "★".repeat(r.s) + "☆".repeat(5 - r.s) + '</span></div>' +
+          '<div>' + r.t + '</div></div></div>';
+      }).join("") +
+    "</div>";
+
+  function subtotal() {
+    var sp = p.skus ? p.skus[detailState.sku].p : 0;
+    var v = (p.price + sp) * detailState.qty;
+    $("subTotal").textContent = "小计 ¥" + v.toFixed(2);
+  }
+  NAIWA.$$("#skuOpts .pay").forEach(function (el) {
+    el.addEventListener("click", function () {
+      NAIWA.$$("#skuOpts .pay").forEach(function (x) { x.classList.remove("on"); });
+      el.classList.add("on");
+      detailState.sku = +el.dataset.sku;
+      NAIWA.audio.select(); subtotal();
+    });
+  });
+  NAIWA.$$(".qtyrow .q button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      detailState.qty = Math.max(1, Math.min(99, detailState.qty + (+b.dataset.q)));
+      $("dq").textContent = detailState.qty; subtotal();
+    });
+  });
+  $("dAdd").addEventListener("click", function () {
+    addToCart(id, detailState.sku, detailState.qty);
+    closeModal("detail");
+  });
+  $("dBuy").addEventListener("click", function () {
+    addToCart(id, detailState.sku, detailState.qty);
+    closeModal("detail");
+    openCheckout();
+  });
+  subtotal();
+  openModal("detail");
+}
+
+/* ---------------- 购物车 ---------------- */
+function cartKey(id, sku) { return id + "::" + (sku || 0); }
+function parseKey(k) { var a = k.split("::"); return { id: +a[0], sku: +a[1] }; }
+function cartEntries() {
+  return Object.keys(st.cart).map(function (k) {
+    var pk = parseKey(k), p = PRODUCTS.filter(function (x) { return x.id === pk.id; })[0];
+    if (!p || st.cart[k] <= 0) return null;
+    var sp = p.skus ? (p.skus[pk.sku] || p.skus[0]).p : 0;
+    return { key: k, p: p, sku: pk.sku, qty: st.cart[k], unit: p.price + sp, skuName: p.skus ? (p.skus[pk.sku] || p.skus[0]).n : "" };
+  }).filter(Boolean);
+}
+function cartCount() { var n = 0; for (var k in st.cart) n += st.cart[k]; return n; }
+function cartTotal() { return cartEntries().reduce(function (s, e) { return s + e.unit * e.qty; }, 0); }
+
+function addToCart(id, sku, qty, btn) {
+  var key = cartKey(id, sku || 0);
+  st.cart[key] = (st.cart[key] || 0) + (qty || 1);
+  NAIWA.store.set("shop:cart", st.cart);
+  NAIWA.audio.coin();
+  if (btn) {
+    btn.classList.add("done"); var old = btn.textContent; btn.textContent = "✓ 已加购";
+    setTimeout(function () { btn.classList.remove("done"); btn.textContent = old; }, 900);
+  }
+  toast("🛒 已加入购物车！", "#7ec850");
+  syncCart();
+}
+function setQty(key, delta) {
+  st.cart[key] = (st.cart[key] || 0) + delta;
+  if (st.cart[key] <= 0) delete st.cart[key];
+  NAIWA.store.set("shop:cart", st.cart);
+  syncCart();
+}
+function removeItem(key) {
+  delete st.cart[key];
+  NAIWA.store.set("shop:cart", st.cart);
+  syncCart(); toast("已移出购物车", "#8b93c8");
+}
+
+function syncCart() {
+  var n = cartCount();
+  $("cartCount").textContent = n;
+  $("cartCount").style.display = n ? "flex" : "none";
+  $("cartTip").textContent = n ? "共 " + n + " 件" : "";
+  var entries = cartEntries();
+  if (!entries.length) {
+    $("cartItems").innerHTML = '<div class="empty" style="padding:50px 10px"><b>🐸</b>购物车空空如也<br>奶蛙正在看着你……</div>';
+  } else {
+    $("cartItems").innerHTML = entries.map(function (e) {
+      return '<div class="ci">' +
+        '<div class="pimg">' + productImgHTML(e.p) + '</div>' +
+        '<div class="info"><h5>' + e.p.name + (e.skuName ? " · " + e.skuName : "") + '</h5>' +
+          '<div class="pp">¥' + e.unit.toFixed(2) + '</div>' +
+          '<div class="qty"><button data-minus="' + e.key + '">−</button><b>' + e.qty + '</b>' +
+          '<button data-plus="' + e.key + '">+</button>' +
+          '<span style="color:var(--muted);font-size:11px;margin-left:6px">小计 ¥' + (e.unit * e.qty).toFixed(2) + '</span></div>' +
+        '</div>' +
+        '<button class="del" data-del="' + e.key + '">🗑️</button>' +
+      '</div>';
+    }).join("");
+    NAIWA.$$("#cartItems [data-minus]").forEach(function (b) { b.onclick = function () { setQty(b.dataset.minus, -1); }; });
+    NAIWA.$$("#cartItems [data-plus]").forEach(function (b) { b.onclick = function () { setQty(b.dataset.plus, 1); }; });
+    NAIWA.$$("#cartItems [data-del]").forEach(function (b) { b.onclick = function () { removeItem(b.dataset.del); }; });
+  }
+  var total = cartTotal();
+  var cp = bestCoupon(total);
+  var cut = cp ? cp.v : 0;
+  $("sumGoods").textContent = "¥" + total.toFixed(2);
+  $("sumCoupon").textContent = "-¥" + cut.toFixed(2) + (cp ? "（" + cp.name + "）" : "");
+  $("sumShip").textContent = total >= 59 || total === 0 ? "包邮" : "¥8.00";
+  var ship = (total >= 59 || total === 0) ? 0 : 8;
+  $("sumTotal").textContent = "¥" + Math.max(0, total - cut + ship).toFixed(2);
+  $("toCheckout").disabled = !entries.length;
+  st.activeCoupon = cp;
+}
+
+/* ---------------- 结算（三段式） ---------------- */
+var ck = { step: 1, pay: "alipay", addr: { name: "", phone: "", city: "", detail: "" } };
+function openCheckout() {
+  if (!cartEntries().length) { toast("购物车是空的！", "#ff4d4f", true); return; }
+  ck.step = 1;
+  renderCheckout();
+  openModal("checkout");
+}
+function renderCheckout() {
+  var entries = cartEntries();
+  var total = cartTotal();
+  var cp = bestCoupon(total);
+  var cut = cp ? cp.v : 0;
+  var ship = (total >= 59) ? 0 : 8;
+  var pay = Math.max(0, total - cut + ship);
+
+  var stepsHTML = '<div class="steps">' +
+    '<div class="s ' + (ck.step === 1 ? "on" : "done") + '"><i>1</i>确认收货信息</div><div class="ln"></div>' +
+    '<div class="s ' + (ck.step === 2 ? "on" : ck.step > 2 ? "done" : "") + '"><i>2</i>选择支付方式</div><div class="ln"></div>' +
+    '<div class="s ' + (ck.step === 3 ? "on" : "") + '"><i>3</i>下单成功</div></div>';
+
+  var body = "";
+  if (ck.step === 1) {
+    body =
+      '<div class="ckbody">' +
+      '<div class="orderlist">' + entries.map(function (e) {
+        return '<div class="oi"><span class="n">' + e.p.emoji + " " + e.p.name + (e.skuName ? " · " + e.skuName : "") + '</span>' +
+          '<span class="q">×' + e.qty + '</span><span class="p">¥' + (e.unit * e.qty).toFixed(2) + '</span></div>';
+      }).join("") + "</div>" +
+      '<div class="field"><label>收货人姓名</label><input id="ckName" placeholder="奶蛙本体" value="' + ck.addr.name + '"></div>' +
+      '<div class="frow">' +
+        '<div class="field"><label>手机号</label><input id="ckPhone" placeholder="13800000000" value="' + ck.addr.phone + '"></div>' +
+        '<div class="field"><label>所在城市</label><input id="ckCity" placeholder="奶蛙星 · 大黄梨区" value="' + ck.addr.city + '"></div>' +
+      "</div>" +
+      '<div class="field"><label>详细地址</label><textarea id="ckDetail" rows="2" placeholder="数据流中转仓 3 号奶蛙货架">' + ck.addr.detail + "</textarea></div>" +
+      '<div class="sumrow"><span>商品合计</span><span>¥' + total.toFixed(2) + '</span></div>' +
+      '<div class="sumrow save"><span>优惠券</span><span>-¥' + cut.toFixed(2) + (cp ? "（" + cp.name + "）" : "") + '</span></div>' +
+      '<div class="sumrow"><span>运费</span><span>' + (ship ? "¥" + ship.toFixed(2) : "包邮") + '</span></div>' +
+      '<div class="sumrow total"><span>应付总额</span><span>¥' + pay.toFixed(2) + '</span></div>' +
+      '<button class="ckbtn" id="ckNext">下一步：选择支付方式</button>' +
+      "</div>";
+  } else if (ck.step === 2) {
+    body =
+      '<div class="ckbody">' +
+      '<div class="field"><label>支付方式</label><div class="payopts" id="payOpts">' +
+        [["alipay", "💙", "支付宝"], ["wechat", "💚", "微信支付"], ["card", "💳", "银行卡"], ["frog", "🐸", "奶蛙币（推荐）"]].map(function (x) {
+          return '<div class="pay' + (ck.pay === x[0] ? " on" : "") + '" data-pay="' + x[0] + '"><b>' + x[1] + '</b>' + x[2] + '</div>';
+        }).join("") +
+      "</div></div>" +
+      '<div style="background:rgba(255,217,77,.08);border:1px solid rgba(255,217,77,.3);border-radius:11px;padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.9;margin-bottom:14px">' +
+        "🐸 <b style='color:var(--frog1)'>奶蛙币</b>：本站虚拟货币，1 奶蛙币 = 1 元。上不封顶，也永远花不完（因为是虚拟的）。" +
+      "</div>" +
+      '<div class="sumrow total"><span>应付总额</span><span>¥' + pay.toFixed(2) + '</span></div>' +
+      '<div style="display:flex;gap:9px"><button class="btn ghost" id="ckBack" style="flex:0 0 auto;background:rgba(16,22,48,.7);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:13px 22px;cursor:pointer;font-family:inherit;font-size:14px">← 上一步</button>' +
+      '<button class="ckbtn" id="ckPay" style="flex:1">🔒 确认支付 ¥' + pay.toFixed(2) + "</button></div>" +
+      "</div>";
+  } else {
+    var order = st.orders[0];
+    body =
+      '<div class="ckbody"><div class="success">' +
+        '<div class="big">🐸</div>' +
+        "<h2>下单成功！</h2>" +
+        "<p>订单号 <b style='color:var(--frog1);font-family:Consolas,monospace'>" + (order ? order.no : "") + "</b><br>" +
+        "奶蛙已收到你的心意，正在用肚子打包。<br>预计 3 个工作日送达（奶蛙走得比较慢）。</p>" +
+        '<div style="margin-top:16px;display:flex;gap:9px;justify-content:center;flex-wrap:wrap">' +
+          '<button class="ckbtn" style="width:auto;padding:12px 26px" id="ckOrders">📦 查看我的订单</button>' +
+          '<button class="ckbtn" style="width:auto;padding:12px 26px;background:linear-gradient(135deg,#22d3ee,#ffd94d);color:#05071a" id="ckClose">继续购物</button>' +
+        "</div>" +
+      "</div></div>";
+  }
+
+  $("ckBox").innerHTML = '<button class="close" data-close="checkout">×</button>' + stepsHTML + body;
+
+  if (ck.step === 1) {
+    $("ckNext").addEventListener("click", function () {
+      ck.addr = {
+        name: $("ckName").value.trim(), phone: $("ckPhone").value.trim(),
+        city: $("ckCity").value.trim(), detail: $("ckDetail").value.trim()
+      };
+      if (!ck.addr.name) { toast("请填写收货人姓名", "#ff4d4f", true); return; }
+      if (!/^\d{6,15}$/.test(ck.addr.phone.replace(/\D/g, ""))) { toast("手机号看起来不太对", "#ff4d4f", true); return; }
+      ck.step = 2; NAIWA.audio.select(); renderCheckout();
+    });
+  } else if (ck.step === 2) {
+    NAIWA.$$("#payOpts .pay").forEach(function (el) {
+      el.addEventListener("click", function () {
+        NAIWA.$$("#payOpts .pay").forEach(function (x) { x.classList.remove("on"); });
+        el.classList.add("on"); ck.pay = el.dataset.pay; NAIWA.audio.select();
+      });
+    });
+    $("ckBack").addEventListener("click", function () { ck.step = 1; renderCheckout(); });
+    $("ckPay").addEventListener("click", function () {
+      var b = this; b.disabled = true; b.textContent = "⏳ 正在连接奶蛙支付网关…";
+      setTimeout(function () { b.textContent = "⏳ 验证奶蛙币余额…"; }, 700);
+      setTimeout(function () {
+        var entries = cartEntries();
+        var total = cartTotal();
+        var cp2 = bestCoupon(total), cut2 = cp2 ? cp2.v : 0;
+        var ship2 = total >= 59 ? 0 : 8;
+        var order = {
+          no: "NW" + Date.now().toString().slice(-10) + Math.floor(Math.random() * 90 + 10),
+          time: new Date().toLocaleString("zh-CN"),
+          items: entries.map(function (e) { return { name: e.p.name, sku: e.skuName, qty: e.qty, unit: e.unit }; }),
+          pay: Math.max(0, total - cut2 + ship2),
+          method: ck.pay, addr: ck.addr,
+          status: "已支付 · 待发货"
+        };
+        st.orders.unshift(order);
+        st.orders = st.orders.slice(0, 20);
+        NAIWA.store.set("shop:orders", st.orders);
+        st.cart = {}; NAIWA.store.set("shop:cart", {});
+        syncCart();
+        NAIWA.audio.coin();
+        ck.step = 3; renderCheckout();
+      }, 1700);
+    });
+  } else {
+    if ($("ckOrders")) $("ckOrders").addEventListener("click", function () { closeModal("checkout"); openOrders(); });
+    if ($("ckClose")) $("ckClose").addEventListener("click", function () { closeModal("checkout"); });
+  }
+}
+
+/* ---------------- 我的订单 ---------------- */
+function openOrders() {
+  var o = st.orders;
+  $("ordBox").innerHTML = '<button class="close" data-close="orders">×</button>' +
+    '<div class="ckbody"><h2 style="font-size:18px;margin-bottom:14px">📦 我的订单 <span style="font-size:11.5px;color:var(--muted);font-weight:400">（保存在本机浏览器）</span></h2>' +
+    (o.length ? o.map(function (x) {
+      return '<div class="ordercard">' +
+        '<div class="oh"><span>订单号 <b>' + x.no + '</b></span><span>' + x.time + '</span></div>' +
+        '<div class="ob">' + x.items.map(function (i) { return "🐸 " + i.name + (i.sku ? " · " + i.sku : "") + " ×" + i.qty; }).join("<br>") + "</div>" +
+        '<div class="oh" style="margin-top:9px;margin-bottom:0"><span class="st">✅ ' + x.status + '</span><span>实付 <b style="color:var(--red)">¥' + x.pay.toFixed(2) + '</b> · ' + x.method + '</span></div>' +
+        '</div>';
+    }).join("") : '<div class="empty" style="padding:40px 10px"><b>📭</b>还没有订单<br>去挑一件奶蛙周边吧</div>') +
+    "</div>";
+  openModal("orders");
+}
+
+/* ---------------- 弹层控制 ---------------- */
+function openModal(id) { $(id).classList.add("open"); }
+function closeModal(id) { $(id).classList.remove("open"); }
+document.addEventListener("click", function (e) {
+  var c = e.target.closest("[data-close]");
+  if (!c) return;
+  var v = c.dataset.close;
+  if (v === "cart") { $("cartDrawer").classList.remove("open"); return; }
+  if (v === "1") {
+    var m = e.target.closest(".modal");
+    if (m) closeModal(m.id);
+    return;
+  }
+  closeModal(v);
 });
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") {
+    ["detail", "checkout", "orders"].forEach(function (id) { closeModal(id); });
+    $("cartDrawer").classList.remove("open");
+  }
+});
+
+/* ---------------- 提示 ---------------- */
+var toastEl = $("toast");
+function toast(msg, color, isErr) {
+  toastEl.textContent = msg;
+  toastEl.style.borderColor = color || "#7ec850";
+  toastEl.style.color = color || "#7ec850";
+  toastEl.classList.add("show");
+  clearTimeout(toastEl._t);
+  toastEl._t = setTimeout(function () { toastEl.classList.remove("show"); }, 1900);
+}
+
+/* ---------------- 顶部交互 ---------------- */
+$("searchBtn").addEventListener("click", doSearch);
+$("q").addEventListener("keydown", function (e) { if (e.key === "Enter") doSearch(); });
+$("q").addEventListener("input", function () {
+  if (this.value === "") { st.q = ""; renderGrid(); }
+});
+function doSearch() {
+  st.q = $("q").value.trim();
+  st.cat = "all"; st.pmin = st.pmax = null;
+  $("pmin").value = ""; $("pmax").value = "";
+  renderCats(); renderGrid();
+  NAIWA.audio.select();
+  if (st.q) toast("🔍 搜索「" + st.q + "」共 " + filtered().length + " 件", "#22d3ee");
+}
+NAIWA.$$(".hotwords b").forEach(function (b) {
+  b.addEventListener("click", function () { $("q").value = b.dataset.w; doSearch(); });
+});
+NAIWA.$$(".sortbar button").forEach(function (b) {
+  b.addEventListener("click", function () {
+    NAIWA.$$(".sortbar button").forEach(function (x) { x.classList.remove("on"); });
+    b.classList.add("on"); st.sort = b.dataset.s; NAIWA.audio.select(); renderGrid();
+  });
+});
+$("applyPrice").addEventListener("click", function () {
+  var a = parseFloat($("pmin").value), b2 = parseFloat($("pmax").value);
+  st.pmin = isNaN(a) ? null : a;
+  st.pmax = isNaN(b2) ? null : b2;
+  if (st.pmin !== null && st.pmax !== null && st.pmin > st.pmax) { var t = st.pmin; st.pmin = st.pmax; st.pmax = t; }
+  renderGrid(); toast("已应用价格筛选 · " + filtered().length + " 件", "#22d3ee");
+});
+$("cartFab").addEventListener("click", function () { $("cartDrawer").classList.add("open"); syncCart(); });
+$("toCheckout").addEventListener("click", openCheckout);
+$("myOrders").addEventListener("click", openOrders);
+$("backtop").addEventListener("click", function () { scrollTo({ top: 0, behavior: "smooth" }); });
+addEventListener("scroll", function () {
+  $("backtop").classList.toggle("show", scrollY > 600);
+});
+
+/* ---------------- 秒杀倒计时 ---------------- */
+setInterval(function () {
+  st.flashLeft--;
+  if (st.flashLeft <= 0) st.flashLeft = 4 * 3600;
+  var h = Math.floor(st.flashLeft / 3600), m = Math.floor(st.flashLeft % 3600 / 60), s = st.flashLeft % 60;
+  $("cdH").textContent = String(h).padStart(2, "0");
+  $("cdM").textContent = String(m).padStart(2, "0");
+  $("cdS").textContent = String(s).padStart(2, "0");
+}, 1000);
+
+/* ---------------- 启动 ---------------- */
+/* 先预热奶蛙原图，保证所有商品图都是真实换色精灵而不是占位图 */
+NAIWA.preloadFrogs().catch(function () { }).then(function () {
+  renderCoupons();
+  renderCats();
+  renderGrid();
+  syncCart();
+  NAIWA.toast("🛒 奶蛙购已就绪 · 领券再买更便宜", "#ffd94d");
+});
+
+})();
 </script>
 </body>
 </html>

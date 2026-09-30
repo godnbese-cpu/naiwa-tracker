@@ -2,463 +2,1694 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ 奶蛙决斗场 · 大奶蛙 VS 小奶蛙</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>⚔️ 奶蛙决斗场 · 奶蛙军团格斗</title>
 <link rel="icon" href="naiwa.webp">
+<meta name="description" content="奶蛙宇宙格斗游戏：12 位奶蛙斗士、连段浮空、超必杀、四大场地，死神VS火影式 2D 格斗手感。">
 <style>
   :root{
     --bg:#05071a; --ink:#e8ecff; --muted:#8b93c8; --line:#2a3a6a;
-    --frog1:#ffd94d; --cyan:#22d3ee; --accent:#ff6ec7; --green:#7ec850;
+    --frog1:#ffd94d; --cyan:#22d3ee; --accent:#ff6ec7; --green:#7ec850; --red:#ff5a5a;
   }
-  *{margin:0;padding:0;box-sizing:border-box}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{
-    background:radial-gradient(1000px 600px at 50% -10%, rgba(34,211,238,.12), transparent 60%), var(--bg);
+    background:radial-gradient(1200px 700px at 50% -15%, rgba(255,90,90,.14), transparent 62%), var(--bg);
     color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
     min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;
   }
-  header{text-align:center;padding:22px 14px 8px}
-  h1{font-size:clamp(22px,4vw,34px);letter-spacing:3px;
+  canvas#netbg{position:fixed;inset:0;z-index:0;opacity:.35;pointer-events:none}
+
+  header{position:relative;z-index:2;text-align:center;padding:20px 14px 6px}
+  h1{font-size:clamp(21px,3.8vw,33px);letter-spacing:3px;
     background:linear-gradient(90deg,#ff5a5a,#ffd94d,#22d3ee);background-size:250% 100%;
     -webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite}
   @keyframes flow{0%{background-position:0 0}100%{background-position:250% 0}}
-  .sub{color:var(--muted);font-size:13px;margin-top:6px}
-  a.back{color:var(--cyan);text-decoration:none;font-size:13px;position:absolute;left:16px;top:24px;border:1px solid rgba(34,211,238,.35);border-radius:20px;padding:5px 14px}
-  a.back:hover{box-shadow:0 0 14px rgba(34,211,238,.35)}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:6px}
+  nav{position:sticky;top:0;z-index:50;background:rgba(5,7,26,.9);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);margin-top:14px;width:100%}
+  nav .inner{max-width:1280px;margin:0 auto;display:flex;gap:6px;padding:8px 16px;overflow-x:auto;scrollbar-width:none}
+  nav a{text-decoration:none;color:var(--ink);font-size:12.5px;padding:6px 14px;border-radius:20px;white-space:nowrap;
+    transition:all .25s;border:1px solid transparent}
+  nav a:hover{color:var(--cyan);border-color:rgba(34,211,238,.5);box-shadow:0 0 14px rgba(34,211,238,.25)}
 
-  .stage{position:relative;margin:10px 0;width:min(960px,96vw)}
-  canvas#game{width:100%;display:block;border-radius:18px;border:1px solid var(--line);box-shadow:0 0 40px rgba(255,90,90,.15);background:#070b22;touch-action:none}
+  .stage{position:relative;margin:12px 0 8px;width:min(1040px,97vw);z-index:2}
+  canvas#game{width:100%;display:block;border-radius:18px;border:1px solid var(--line);
+    box-shadow:0 0 60px rgba(255,90,90,.18);background:#070b22;touch-action:none;cursor:crosshair}
 
-  .overlay{
-    position:absolute;inset:0;border-radius:18px;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:14px;text-align:center;
-    background:rgba(5,7,26,.86);backdrop-filter:blur(4px);padding:26px;
-  }
+  /* ============ 覆盖层 ============ */
+  .overlay{position:absolute;inset:0;border-radius:18px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:12px;text-align:center;
+    background:rgba(5,7,26,.9);backdrop-filter:blur(6px);padding:20px;z-index:30;overflow:hidden}
   .overlay.hidden{display:none}
-  .overlay h2{font-size:30px;letter-spacing:2px}
-  .overlay p{color:var(--muted);font-size:13px;line-height:1.9;max-width:480px}
-  .btn{border:none;cursor:pointer;font-size:15px;font-weight:800;padding:13px 40px;border-radius:30px;color:#05071a;background:linear-gradient(135deg,#ff5a5a,#ffd94d);box-shadow:0 0 24px rgba(255,90,90,.45);font-family:inherit;transition:all .25s}
-  .btn:hover{transform:translateY(-3px);box-shadow:0 0 34px rgba(255,90,90,.7)}
-  .keys{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--muted)}
-  .keys b{border:1px solid var(--line);border-radius:8px;padding:4px 10px;color:var(--ink);font-family:Consolas,monospace}
-  .char-grid{display:flex;gap:22px;margin:6px 0}
-  .char-card{border:1px solid var(--line);border-radius:16px;padding:14px 18px;background:rgba(16,22,48,.6);width:190px}
-  .char-card img{width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 0 14px rgba(255,217,77,.4))}
-  .char-card h3{font-size:16px;margin:8px 0 4px}
-  .char-card .skills{font-size:12px;color:var(--muted);line-height:1.9}
-  .char-card .skills b{color:var(--frog1)}
-  .char-card.p2 .skills b{color:var(--accent)}
+  .overlay h2{font-size:clamp(19px,3vw,27px);letter-spacing:2px;
+    background:linear-gradient(90deg,#ffd94d,#ff6ec7);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .overlay p{color:var(--muted);font-size:12.5px;line-height:1.85;max-width:620px}
+  .btn{border:none;cursor:pointer;font-size:15px;font-weight:800;padding:13px 42px;border-radius:30px;color:#05071a;
+    background:linear-gradient(135deg,#ff5a5a,#ffd94d);box-shadow:0 0 26px rgba(255,90,90,.45);
+    font-family:inherit;transition:all .22s}
+  .btn:hover{transform:translateY(-3px);box-shadow:0 0 38px rgba(255,90,90,.75)}
+  .btn.ghost{background:rgba(16,22,48,.7);color:var(--ink);border:1px solid var(--line);box-shadow:none;padding:10px 22px;font-size:13px}
+  .btn.ghost:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 18px rgba(34,211,238,.3);transform:none}
 
-  /* KO 大字 */
-  .ko-text{
-    position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);
-    font-size:min(18vw,140px);font-weight:900;color:#ff5a5a;letter-spacing:8px;
-    text-shadow:0 0 40px rgba(255,90,90,.9),0 0 80px rgba(255,90,90,.5);
-    pointer-events:none;opacity:0;z-index:20;
-  }
-  .ko-text.show{animation:koIn 1.1s cubic-bezier(.2,1.4,.3,1) both}
-  @keyframes koIn{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(-8deg)}60%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(2deg)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+  /* ============ 模式选择 ============ */
+  .mode-grid{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;max-width:760px}
+  .mode{border:1px solid var(--line);border-radius:14px;padding:13px 18px;background:rgba(16,22,48,.6);
+    cursor:pointer;transition:all .22s;min-width:168px;text-align:left}
+  .mode:hover{border-color:var(--cyan);transform:translateY(-3px);box-shadow:0 0 20px rgba(34,211,238,.25)}
+  .mode.on{border-color:var(--frog1);background:linear-gradient(135deg,rgba(255,217,77,.16),rgba(255,110,199,.08));
+    box-shadow:0 0 22px rgba(255,217,77,.3)}
+  .mode b{font-size:14px;display:block}
+  .mode span{font-size:11.5px;color:var(--muted);display:block;margin-top:3px;line-height:1.6}
 
-  footer{color:var(--muted);font-size:12px;padding:14px;text-align:center;line-height:1.9}
+  /* ============ 角色选择 ============ */
+  .pick-wrap{width:100%;max-width:980px;display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  @media(max-width:820px){.pick-wrap{grid-template-columns:1fr}}
+  .side{border:1px solid var(--line);border-radius:16px;padding:12px;background:rgba(13,20,48,.66)}
+  .side.p1{border-color:rgba(255,217,77,.42)}
+  .side.p2{border-color:rgba(255,110,199,.42)}
+  .side-h{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;margin-bottom:9px}
+  .side-h b{font-size:14px}
+  .side.p1 .side-h b{color:var(--frog1)} .side.p2 .side-h b{color:var(--accent)}
+  .roster{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  @media(max-width:520px){.roster{grid-template-columns:repeat(4,1fr)}}
+  .rf{position:relative;aspect-ratio:1;border-radius:11px;border:1px solid var(--line);background:rgba(5,7,26,.7);
+    cursor:pointer;overflow:hidden;transition:all .2s;display:flex;align-items:center;justify-content:center}
+  .rf canvas{width:82%;height:82%;object-fit:contain;image-rendering:auto;transition:transform .22s}
+  .rf:hover{border-color:var(--cyan);transform:translateY(-3px);box-shadow:0 0 16px rgba(34,211,238,.3)}
+  .rf:hover canvas{transform:scale(1.12)}
+  .rf.sel1{border-color:var(--frog1);box-shadow:0 0 18px rgba(255,217,77,.55)}
+  .rf.sel2{border-color:var(--accent);box-shadow:0 0 18px rgba(255,110,199,.55)}
+  .rf .nm{position:absolute;left:0;right:0;bottom:0;font-size:9.5px;background:linear-gradient(transparent,rgba(5,7,26,.92));
+    padding:8px 2px 3px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rf.lock{opacity:.35;filter:grayscale(.7)}
+  .rf .bdg{position:absolute;top:2px;right:3px;font-size:8.5px;background:var(--red);color:#fff;border-radius:6px;padding:1px 4px}
+
+  .f-detail{margin-top:10px;border-top:1px dashed rgba(42,58,106,.8);padding-top:9px;text-align:left}
+  .f-detail h4{font-size:14.5px;display:flex;align-items:center;gap:8px}
+  .f-detail h4 .ttl{font-size:10.5px;color:var(--muted);font-weight:400;border:1px solid var(--line);border-radius:10px;padding:1px 8px}
+  .f-detail .lore{font-size:11.5px;color:var(--muted);line-height:1.7;margin:6px 0 8px}
+  .bars{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;font-size:10.5px;color:var(--muted);align-items:center}
+  .bars .b{height:7px;background:rgba(42,58,106,.5);border-radius:4px;overflow:hidden}
+  .bars .b i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#22d3ee,#ffd94d)}
+  .mv{font-size:11px;line-height:1.85;margin-top:8px;color:#b8c0e8}
+  .mv b{color:var(--frog1)}
+
+  /* ============ 场地选择 ============ */
+  .stage-grid{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .stg{border:1px solid var(--line);border-radius:13px;padding:9px 14px;background:rgba(16,22,48,.6);cursor:pointer;
+    transition:all .2s;font-size:12.5px;text-align:left;min-width:150px}
+  .stg:hover{border-color:var(--cyan);transform:translateY(-2px)}
+  .stg.on{border-color:var(--frog1);box-shadow:0 0 18px rgba(255,217,77,.35)}
+  .stg b{display:block;font-size:13px} .stg span{font-size:10.5px;color:var(--muted)}
+
+  /* ============ 键位提示 ============ */
+  .keys{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;font-size:11.5px;color:var(--muted);max-width:820px}
+  .keys b{border:1px solid var(--line);border-radius:7px;padding:3px 9px;color:var(--ink);font-family:Consolas,monospace;font-size:11px}
+
+  /* ============ 移动端虚拟按键 ============ */
+  .touch{position:absolute;inset:0;z-index:25;pointer-events:none;display:none}
+  .touch.on{display:block}
+  .pad{position:absolute;bottom:10px;display:flex;gap:8px;pointer-events:auto}
+  .pad.left{left:10px}
+  .pad.right{right:10px;flex-wrap:wrap;justify-content:flex-end;max-width:210px}
+  .tb{width:56px;height:56px;border-radius:50%;border:1px solid rgba(232,236,255,.35);
+    background:rgba(16,22,48,.62);color:#e8ecff;font-size:16px;font-weight:800;display:flex;
+    align-items:center;justify-content:center;font-family:inherit;user-select:none;transition:all .1s}
+  .tb:active,.tb.act{background:rgba(255,217,77,.4);border-color:var(--frog1);transform:scale(.92)}
+  .tb.sm{width:46px;height:46px;font-size:12px}
+
+  /* ============ KO / 回合 大字 ============ */
+  .announce{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);pointer-events:none;z-index:22;
+    font-size:min(17vw,150px);font-weight:900;letter-spacing:10px;opacity:0;text-align:center;line-height:1}
+  .announce.show{animation:annIn .95s cubic-bezier(.16,1.3,.3,1) both}
+  @keyframes annIn{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.25) rotate(-9deg);filter:blur(12px)}
+    55%{opacity:1;transform:translate(-50%,-50%) scale(1.16) rotate(2deg);filter:blur(0)}
+    75%{transform:translate(-50%,-50%) scale(1) rotate(0)}
+    100%{opacity:1;transform:translate(-50%,-50%) scale(1.03)}}
+
+  /* ============ 顶部血条 HUD（DOM 版，更清晰） ============ */
+  .hud{position:absolute;top:0;left:0;right:0;padding:9px 12px 0;z-index:20;pointer-events:none;
+    display:flex;align-items:flex-start;gap:10px;font-size:11px}
+  .hud .pbar{flex:1;max-width:44%}
+  .hud .pbar .top{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+  .hud .pbar .nm{font-size:12.5px;font-weight:800;text-shadow:0 2px 8px #000}
+  .hud .pbar .tag{font-size:9.5px;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:0 6px}
+  .hud .pbar .rounds{display:flex;gap:3px;margin-left:auto}
+  .hud .pbar .rounds i{width:9px;height:9px;border-radius:50%;background:rgba(42,58,106,.8);border:1px solid var(--line)}
+  .hud .pbar .rounds i.win{background:var(--frog1);box-shadow:0 0 8px var(--frog1);border-color:transparent}
+  .hud .hpwrap{position:relative;height:19px;border-radius:10px;background:rgba(5,7,26,.86);
+    border:1px solid var(--line);overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.55)}
+  .hud .hpwrap .chip{position:absolute;top:0;bottom:0;background:rgba(255,110,199,.5);transition:width .45s ease .12s}
+  .hud .hpwrap .hp{position:absolute;top:0;bottom:0;left:0;transition:width .16s linear;
+    background:linear-gradient(180deg,#ffe98a,#ffd94d 45%,#f5a800)}
+  .hud .hpwrap .hp.low{background:linear-gradient(180deg,#ff9a9a,#ff5a5a 45%,#c62828);animation:hpPulse .6s infinite}
+  @keyframes hpPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.5)}}
+  .hud .hpwrap .hpTxt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:10.5px;font-weight:800;color:#05071a;text-shadow:0 1px 0 rgba(255,255,255,.35);font-variant-numeric:tabular-nums}
+  .hud .p2 .hpwrap{transform:scaleX(-1)} .hud .p2 .hpwrap .hpTxt{transform:scaleX(-1)}
+  .hud .p2 .top{flex-direction:row-reverse}
+  .hud .p2 .rounds{margin-left:0;margin-right:auto;flex-direction:row-reverse}
+  .hud .p2{text-align:right}
+  .hud .meter{margin-top:5px;height:9px;border-radius:6px;background:rgba(5,7,26,.86);border:1px solid var(--line);overflow:hidden;position:relative}
+  .hud .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#22d3ee,#8a6bff,#ff6ec7);transition:width .2s}
+  .hud .meter.full i{background:linear-gradient(90deg,#ffd94d,#ff6ec7,#22d3ee);animation:mtFull .55s infinite alternate}
+  @keyframes mtFull{from{filter:brightness(1)}to{filter:brightness(1.7)}}
+  .hud .meter span{position:absolute;inset:0;font-size:8px;display:flex;align-items:center;justify-content:center;color:#fff;letter-spacing:1px}
+  .hud .p2 .meter{transform:scaleX(-1)} .hud .p2 .meter span{transform:scaleX(-1)}
+  .hud .center{width:104px;text-align:center;flex-shrink:0}
+  .hud .timer{font-size:27px;font-weight:900;font-family:Consolas,monospace;color:var(--frog1);
+    text-shadow:0 0 16px rgba(255,217,77,.6);line-height:1}
+  .hud .timer.warn{color:var(--red);text-shadow:0 0 18px rgba(255,90,90,.8);animation:hpPulse .5s infinite}
+  .hud .roundTxt{font-size:10px;color:var(--muted);margin-top:2px}
+
+  /* 连段计数 */
+  .combo{position:absolute;z-index:21;pointer-events:none;opacity:0;transition:opacity .2s;font-weight:900}
+  .combo.show{opacity:1}
+  .combo .n{font-size:40px;line-height:1;color:var(--frog1);text-shadow:0 0 22px rgba(255,217,77,.9),0 3px 0 #7a4b00}
+  .combo .t{font-size:12px;letter-spacing:3px;color:#fff;text-shadow:0 0 12px #000}
+  .combo .d{font-size:13px;color:var(--accent);font-weight:800}
+
+  /* 结果表 */
+  .resultbox{display:grid;grid-template-columns:auto auto;gap:6px 18px;font-size:13px;
+    background:rgba(13,20,48,.7);border:1px solid var(--line);border-radius:14px;padding:14px 20px;margin:4px 0}
+  .resultbox .k{color:var(--muted)} .resultbox .v{color:var(--frog1);font-weight:800;text-align:right}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px 0 4px;position:relative;z-index:2}
+  footer{color:var(--muted);font-size:11.5px;padding:16px 12px 46px;text-align:center;line-height:1.9;position:relative;z-index:2;max-width:900px}
+  .badge-line{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+  .badge-line span{font-size:11px;border:1px solid var(--line);border-radius:20px;padding:3px 12px;color:var(--muted)}
 </style>
 </head>
 <body>
-<a class="back" href="index.html">← 观测站</a>
-<a class="back" href="shop.html" style="left:auto;right:16px">奶蛙购 →</a>
+<canvas id="netbg"></canvas>
+
 <header>
   <h1>⚔️ 奶蛙决斗场</h1>
-  <div class="sub">死神VS火影式格斗 · 大奶蛙【笑·哭】 VS 小奶蛙【装死】</div>
+  <div class="sub">12 位奶蛙斗士 · 连段浮空 · 超必杀 · 四大场地 —— 死神VS火影式 2D 格斗</div>
 </header>
 
-<div class="stage">
-  <canvas id="game" width="960" height="540"></canvas>
-  <div class="ko-text" id="koText">K.O.</div>
+<nav data-naiwa-nav><div class="inner"></div></nav>
 
-  <div class="overlay" id="menu">
-    <h2>奶蛙决斗场</h2>
-    <div class="char-grid">
-      <div class="char-card">
-        <img src="naiwa-smiling.webp" alt="大奶蛙">
-        <h3>大奶蛙（你）</h3>
-        <div class="skills">技能① <b>笑</b>：癫狂声波，远程连段<br>技能② <b>哭</b>：泪之瀑布，近身高伤<br>血量 100 · 体型大，速度中</div>
+<div class="stage">
+  <canvas id="game" width="1120" height="630"></canvas>
+
+  <!-- HUD -->
+  <div class="hud" id="hud" style="display:none">
+    <div class="pbar p1">
+      <div class="top">
+        <span class="nm" id="n1">大奶蛙</span>
+        <span class="tag" id="t1">笑与哭之主</span>
+        <span class="rounds" id="r1"><i></i><i></i></span>
       </div>
-      <div class="char-card p2">
-        <img src="naiwa-thinking.webp" alt="小奶蛙">
-        <h3>小奶蛙（AI）</h3>
-        <div class="skills">技能 <b>装死</b>：原地趴倒无敌 2 秒，起身反扑<br>血量 80 · 体型小，速度快</div>
+      <div class="hpwrap">
+        <div class="chip" id="chip1" style="width:100%"></div>
+        <div class="hp" id="hp1" style="width:100%"></div>
+        <div class="hpTxt" id="hpTxt1">105 / 105</div>
       </div>
+      <div class="meter" id="mt1"><i></i><span id="mtTxt1">ENERGY 0%</span></div>
     </div>
-    <div class="keys">
-      <span><b>A D</b> 移动</span><span><b>W</b> 跳跃</span>
-      <span><b>J</b> 技能·笑</span><span><b>K</b> 技能·哭</span>
+    <div class="center">
+      <div class="timer" id="timer">99</div>
+      <div class="roundTxt" id="roundTxt">ROUND 1</div>
     </div>
-    <p style="font-size:11px">手机：左半屏左右滑动移动，右半屏点按出招</p>
-    <button class="btn" id="startBtn">⚔️ 开战！</button>
+    <div class="pbar p2">
+      <div class="top">
+        <span class="nm" id="n2">小奶蛙</span>
+        <span class="tag" id="t2">装死艺术大师</span>
+        <span class="rounds" id="r2"><i></i><i></i></span>
+      </div>
+      <div class="hpwrap">
+        <div class="chip" id="chip2" style="width:100%"></div>
+        <div class="hp" id="hp2" style="width:100%"></div>
+        <div class="hpTxt" id="hpTxt2">82 / 82</div>
+      </div>
+      <div class="meter" id="mt2"><i></i><span id="mtTxt2">ENERGY 0%</span></div>
+    </div>
   </div>
 
-  <div class="overlay hidden" id="endScreen">
-    <h2 id="endTitle">胜负已分</h2>
-    <p id="endDesc"></p>
-    <button class="btn" id="againBtn">🔄 再战一局</button>
+  <div class="announce" id="announce">K.O.</div>
+
+  <div class="combo" id="combo1" style="left:14%;top:34%">
+    <div class="n"><span id="cmb1n">0</span> <span style="font-size:15px">HITS</span></div>
+    <div class="t">COMBO</div><div class="d" id="cmb1d">0</div>
+  </div>
+  <div class="combo" id="combo2" style="right:14%;top:34%;text-align:right">
+    <div class="n"><span id="cmb2n">0</span> <span style="font-size:15px">HITS</span></div>
+    <div class="t">COMBO</div><div class="d" id="cmb2d">0</div>
+  </div>
+
+  <!-- 触屏按键 -->
+  <div class="touch" id="touch">
+    <div class="pad left">
+      <button class="tb" data-k="a">◀</button>
+      <button class="tb" data-k="d">▶</button>
+      <button class="tb" data-k="w">跳</button>
+      <button class="tb" data-k="s">蹲</button>
+    </div>
+    <div class="pad right">
+      <button class="tb sm" data-k="j">轻</button>
+      <button class="tb sm" data-k="k">重</button>
+      <button class="tb sm" data-k="l">挑</button>
+      <button class="tb sm" data-k="u">技①</button>
+      <button class="tb sm" data-k="i">技②</button>
+      <button class="tb sm" data-k="o">超杀</button>
+      <button class="tb sm" data-k="p">防</button>
+      <button class="tb sm" data-k="g">抓</button>
+    </div>
+  </div>
+
+  <!-- 主菜单 -->
+  <div class="overlay" id="menu">
+    <h2>🐸 奶蛙决斗场 · 军团集结</h2>
+    <div class="mode-grid" id="modes">
+      <div class="mode on" data-m="cpu"><b>🎮 单人闯关</b><span>对战 CPU，6 场连胜挑战奶蛙之神</span></div>
+      <div class="mode" data-m="versus"><b>👥 双人对战</b><span>同一键盘两人对打，左右分区操作</span></div>
+      <div class="mode" data-m="survival"><b>💀 生存模式</b><span>血量继承，连挑奶蛙军团直到倒下</span></div>
+      <div class="mode" data-m="training"><b>🧪 训练营</b><span>对手不还手，练习连段与手感</span></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center">
+      <span style="font-size:12px;color:var(--muted)">CPU 难度</span>
+      <button class="btn ghost" id="diffBtn">普通</button>
+      <button class="btn ghost" id="soundBtn">🔊 音效开</button>
+    </div>
+    <div class="keys">
+      <span><b>A D</b> 移动</span><span><b>W</b> 跳跃(可二段)</span><span><b>S</b> 蹲防</span>
+      <span><b>Shift</b> 冲刺</span><span><b>J</b> 轻攻</span><span><b>K</b> 重攻</span>
+      <span><b>U</b> 挑击</span><span><b>K+U</b> 抓取</span><span><b>L</b> 技①</span>
+      <span><b>I</b> 技②</span><span><b>O</b> 超必杀</span><span><b>P</b> 防御</span>
+    </div>
+    <button class="btn" id="startBtn">⚔️ 选择斗士</button>
+    <p style="font-size:11px">手机端：右下角虚拟按键，自动显示</p>
+  </div>
+
+  <!-- 选人 -->
+  <div class="overlay hidden" id="select">
+    <h2>选择你的奶蛙</h2>
+    <div class="pick-wrap">
+      <div class="side p1">
+        <div class="side-h"><b id="sd1h">1P 斗士</b><span style="color:var(--muted);font-size:11px" id="sd1c">点击头像选择</span></div>
+        <div class="roster" id="roster1"></div>
+        <div class="f-detail" id="d1"></div>
+      </div>
+      <div class="side p2">
+        <div class="side-h"><b id="sd2h">2P / CPU</b><span style="color:var(--muted);font-size:11px" id="sd2c">点击头像选择</span></div>
+        <div class="roster" id="roster2"></div>
+        <div class="f-detail" id="d2"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+      <button class="btn ghost" id="randBtn">🎲 随机</button>
+      <button class="btn" id="toStageBtn">选择场地 →</button>
+    </div>
+  </div>
+
+  <!-- 场地 -->
+  <div class="overlay hidden" id="stagepick">
+    <h2>选择战场</h2>
+    <div class="stage-grid" id="stageGrid"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn ghost" id="backSelBtn">← 返回选人</button>
+      <button class="btn" id="fightBtn">🔥 FIGHT!</button>
+    </div>
+  </div>
+
+  <!-- 结果 -->
+  <div class="overlay hidden" id="result">
+    <h2 id="resTitle">胜负已分</h2>
+    <p id="resDesc"></p>
+    <div class="resultbox" id="resBox"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+      <button class="btn" id="againBtn">🔄 再战一局</button>
+      <button class="btn ghost" id="changeBtn">换斗士</button>
+      <button class="btn ghost" id="menuBtn">回主菜单</button>
+    </div>
   </div>
 </div>
 
+<div class="toolbar">
+  <button class="btn ghost" id="pauseBtn">⏸️ 暂停</button>
+  <button class="btn ghost" id="hitboxBtn">🔍 判定框</button>
+  <button class="btn ghost" id="frameBtn">🎞️ 帧数据</button>
+</div>
+
 <footer>
-  🐸 奶蛙形象素材：naiwa.world 官方档案（思考/站立/大笑三姿）· 非商用玩梗<br>
-  小奶蛙装死时完全无敌，大奶蛙记得算好他起身的瞬间再出手！
+  🐸 12 位斗士形象均由原图程序化换色生成（assets/fighters.js），无外部素材依赖 ·
+  手感参考《死神VS火影》：连段、浮空、霸体、无敌帧、超必杀慢镜<br>
+  <span id="recTxt" style="color:var(--frog1)"></span>
+  <div class="badge-line">
+    <span>连段缩放</span><span>霸体 &amp; 无敌帧</span><span>防御削减</span><span>墙角压制</span>
+    <span>投技不可防</span><span>减速/灼烧/吸能</span><span>命中定格</span><span>KO 慢镜</span>
+  </div>
 </footer>
 
+<script src="naiwa-common.js"></script>
+<script src="assets/fighters.js"></script>
 <script>
-(function(){
+/* ============================================================
+   ⚔️ 奶蛙决斗场 · 战斗引擎 v2
+   60fps 固定步长 · 状态机 · 帧判定 · AI 分级
+   ============================================================ */
+(function () {
 "use strict";
-const cv=document.getElementById("game"),ctx=cv.getContext("2d");
-const W=cv.width,H=cv.height;
-const GROUND=H-90;
 
-/* ---------- 素材 ---------- */
-const IMGS={
-  big:new Image(), small:new Image(), bigAtk:new Image(), smallDead:new Image()
-};
-IMGS.big.src="naiwa-standing.webp";      // 大奶蛙 站立
-IMGS.bigAtk.src="naiwa-smiling.webp";    // 大奶蛙 笑（攻击姿态）
-IMGS.small.src="naiwa-thinking.webp";    // 小奶蛙 思考
-IMGS.smallDead.src="naiwa-standing.webp";// 小奶蛙 装死用站立图旋转
-let loaded=0;
-Object.values(IMGS).forEach(im=>im.onload=()=>loaded++);
+/* ---------------- 常量 ---------------- */
+var cv = document.getElementById("game"), ctx = cv.getContext("2d");
+var W = cv.width, H = cv.height;
+var GROUND = H - 96;
+var WALL_L = 40, WALL_R = W - 40;
+var FPS = 60, STEP = 1000 / FPS;
+var GRAV = 0.86, FRIC = 0.84, AIR_FRIC = 0.965;
+var F = NAIWA.FIGHTERS;
 
-/* ---------- 游戏状态 ---------- */
-let state="menu";
-let shake=0, slowmo=0;
-const keys={};
-addEventListener("keydown",e=>{keys[e.key.toLowerCase()]=true;
-  if(["w","a","d","j","k"," "].includes(e.key.toLowerCase()))e.preventDefault();});
-addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false;});
-let touchL=null;
-cv.addEventListener("pointerdown",e=>{
-  const r=cv.getBoundingClientRect();
-  if((e.clientX-r.left)/r.width<0.5){touchL=e.clientX;}
-  else{skill1();}
+/* ---------------- 输入 ---------------- */
+var keys = {}, prevKeys = {}, buffer = [];
+function keyName(e) {
+  var k = e.key;
+  if (k === " ") return "space";
+  if (k === "Shift") return "shift";
+  if (k === "ArrowLeft") return "a";
+  if (k === "ArrowRight") return "d";
+  if (k === "ArrowUp") return "w";
+  if (k === "ArrowDown") return "s";
+  return k.toLowerCase();
+}
+addEventListener("keydown", function (e) {
+  var k = keyName(e);
+  if (["a","d","w","s","j","k","l","u","i","o","p","g","space","shift"].indexOf(k) >= 0) e.preventDefault();
+  if (!keys[k]) buffer.push({ k: k, t: performance.now() });
+  keys[k] = true;
+}, { passive: false });
+addEventListener("keyup", function (e) { keys[keyName(e)] = false; });
+addEventListener("blur", function () { keys = {}; });
+
+/* 缓冲输入（8 帧内有效，格斗游戏手感关键） */
+function pressed(k) {
+  var now = performance.now();
+  for (var i = buffer.length - 1; i >= 0; i--) {
+    if (buffer[i].k === k && now - buffer[i].t < 140) return true;
+  }
+  return false;
+}
+function consume(k) {
+  for (var i = buffer.length - 1; i >= 0; i--) if (buffer[i].k === k) buffer.splice(i, 1);
+}
+
+/* 触屏 */
+var touchKeys = {};
+NAIWA.$$("#touch .tb").forEach(function (b) {
+  var k = b.dataset.k;
+  function on(e) { e.preventDefault(); touchKeys[k] = true; if (!keys[k]) buffer.push({ k: k, t: performance.now() }); keys[k] = true; b.classList.add("act"); }
+  function off(e) { e.preventDefault(); touchKeys[k] = false; keys[k] = false; b.classList.remove("act"); }
+  b.addEventListener("pointerdown", on);
+  b.addEventListener("pointerup", off);
+  b.addEventListener("pointercancel", off);
+  b.addEventListener("pointerleave", off);
 });
-cv.addEventListener("pointermove",e=>{if(touchL!==null)touchL=e.clientX;});
-cv.addEventListener("pointerup",()=>{touchL=null;});
+if (matchMedia("(pointer:coarse)").matches) document.getElementById("touch").classList.add("on");
 
-/* ---------- 角色 ---------- */
-const P1={ // 大奶蛙
-  name:"大奶蛙",img:"big",atkImg:"bigAtk",
-  x:180,y:GROUND,vx:0,vy:0,face:1,
-  w:130,h:130,hp:100,maxHp:100,speed:4.6,jumpP:14,
-  atkT:0,cd1:0,cd2:0,hurtT:0,onGround:true,dead:false
+/* ---------------- HUD 引用 ---------------- */
+var $ = function (id) { return document.getElementById(id); };
+var hud = {
+  root: $("hud"), timer: $("timer"), roundTxt: $("roundTxt"),
+  n: [$("n1"), $("n2")], t: [$("t1"), $("t2")],
+  hp: [$("hp1"), $("hp2")], chip: [$("chip1"), $("chip2")], hpTxt: [$("hpTxt1"), $("hpTxt2")],
+  mt: [$("mt1"), $("mt2")], mtTxt: [$("mtTxt1"), $("mtTxt2")],
+  rounds: [$("r1"), $("r2")]
 };
-const P2={ // 小奶蛙
-  name:"小奶蛙",img:"small",atkImg:"small",
-  x:720,y:GROUND,vx:0,vy:0,face:-1,
-  w:78,h:78,hp:80,maxHp:80,speed:6.2,jumpP:13,
-  atkT:0,cd1:0,hurtT:0,onGround:true,dead:false,
-  playingDead:false,deadT:0,aiT:0
+var comboEl = [$("combo1"), $("combo2")], comboCnt = [$("cmb1n"), $("cmb2n")], comboDmg = [$("cmb1d"), $("cmb2d")];
+var announce = $("announce");
+
+/* ---------------- 关卡 / 进度 ---------------- */
+var MODES = {
+  cpu:      { name: "单人闯关", wins: 2, rounds: "6 场连胜" },
+  versus:   { name: "双人对战", wins: 2, rounds: "BO3" },
+  survival: { name: "生存模式", wins: 1, rounds: "血量继承" },
+  training: { name: "训练营",   wins: 1, rounds: "无限时间" }
 };
-let projectiles=[],floaters=[],parts=[],roundT=99;
+var state = {
+  phase: "menu",        // menu | select | stage | announce | fight | ko | over
+  mode: "cpu", diff: 1, sound: true,
+  pick: [0, 1], stage: 0,
+  round: 1, wins: [0, 0], timer: 99,
+  combo: [0, 0], comboDmg: [0, 0], comboT: [0, 0],
+  ladder: 0,            // 闯关进度（0..5）
+  hitstop: 0, shake: 0, slow: 0, flash: 0,
+  showHitbox: false, showFrame: false,
+  stat: { hits: 0, maxCombo: 0, dmg: 0, time: 0 }
+};
+var DIFFS = [
+  { label: "简单", ai: { react: 26, aggr: .28, block: .18, tech: .10 } },
+  { label: "普通", ai: { react: 16, aggr: .46, block: .34, tech: .30 } },
+  { label: "困难", ai: { react: 9,  aggr: .64, block: .52, tech: .55 } },
+  { label: "地狱", ai: { react: 5,  aggr: .82, block: .68, tech: .78 } }
+];
 
-function reset(){
-  Object.assign(P1,{x:180,y:GROUND,vx:0,vy:0,face:1,hp:P1.maxHp,atkT:0,cd1:0,cd2:0,hurtT:0,dead:false});
-  Object.assign(P2,{x:720,y:GROUND,vx:0,vy:0,face:-1,hp:P2.maxHp,atkT:0,cd1:0,hurtT:0,dead:false,playingDead:false,deadT:0,aiT:0});
-  projectiles=[];floaters=[];parts=[];roundT=99;
+/* ---------------- 实体 ---------------- */
+function makeEnt(id, side, def) {
+  /* 体型由体重推导：越重越大只，BOSS 固定大体型 */
+  var wScale = (def.weight || 1) * 0.55 + 1 * 0.45;
+  var size = def.boss ? 120 : Math.round(96 * wScale);
+  return {
+    id: id, side: side, def: def,
+    x: side === 0 ? W * 0.28 : W * 0.72, y: GROUND,
+    vx: 0, vy: 0, face: side === 0 ? 1 : -1,
+    w: size, h: size,
+    hp: def.hp, maxHp: def.hp, chipHp: def.hp,
+    meter: 0, onGround: true, jumps: 0, maxJumps: 1 + (def.airJumps || 0),
+    state: "idle", stateT: 0, move: null, phase: "startup", hitDone: false,
+    hitstun: 0, blockstun: 0, invuln: 0, armor: 0, crouch: false, guard: false,
+    dashT: 0, dashDir: 0, air: false, dead: false, koT: 0,
+    chainIdx: 0, chainT: 0, counter: null, buff: 0,
+    slow: 0, burn: 0, drainFx: 0, trail: [], flashT: 0,
+    ai: { t: 0, plan: "approach", hold: 0 }, hitFlash: 0, pushOut: 0,
+    anim: { lean: 0, scale: 1, rot: 0, yOff: 0 }
+  };
 }
+var P = [null, null], projectiles = [], particles = [], floaters = [], afterimages = [], rings = [];
 
-/* ---------- 技能 ---------- */
-function skill1(){ // 大奶蛙·笑
-  if(state!=="run"||P1.cd1>0||P1.dead)return;
-  P1.cd1=1.2;P1.atkT=0.35;
-  for(let i=0;i<3;i++){
-    setTimeout(()=>{if(state!=="run"||P1.dead)return;
-      projectiles.push({
-        type:"laugh",x:P1.x+P1.face*70,y:P1.y-50,vx:P1.face*(9+i*1.5),
-        r:18+i*10,dmg:8,hit:false,t:0,from:1
-      });
-      shake=0.15;
-    },i*140);
-  }
-  addFloat(P1.x,P1.y-90,"齁齁齁！","#ffd94d",22);
-}
-function skill2(){ // 大奶蛙·哭
-  if(state!=="run"||P1.cd2>0||P1.dead)return;
-  P1.cd2=2.8;P1.atkT=0.5;
-  for(let i=0;i<8;i++){
-    setTimeout(()=>{if(state!=="run"||P1.dead)return;
-      projectiles.push({
-        type:"tear",x:P1.x+(Math.random()-.5)*140+P1.face*80,y:P1.y-160-Math.random()*80,
-        vx:P1.face*2,vy:2+Math.random()*3,ay:0.55,r:12,dmg:6,hit:false,from:1
-      });
-    },i*90);
-  }
-  addFloat(P1.x,P1.y-90,"呜呜呜……","#5aa8ff",20);
-}
-
-/* ---------- 特效 ---------- */
-function addFloat(x,y,txt,color,size){
-  floaters.push({x,y,txt,color,size,t:0,vy:-1.6});
-}
-function burst(x,y,color,n=10){
-  for(let i=0;i<n;i++)parts.push({
-    x,y,vx:(Math.random()-.5)*260,vy:(Math.random()-.5)*260-80,
-    life:.5+Math.random()*.4,t:0,color,r:2+Math.random()*4
+/* ---------------- 缓存精灵 ---------------- */
+var sprites = {};
+function buildSprites() {
+  F.list.forEach(function (f) {
+    sprites[f.id] = {
+      idle: NAIWA.tintSprite(f.src, f.color, { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, stroke: NAIWA.rgba(f.color, .9), size: 256 }),
+      atk: NAIWA.tintSprite(f.atkSrc, f.color, { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, stroke: NAIWA.rgba(f.accent, .9), size: 256 }),
+      sad: NAIWA.tintSprite(f.sadSrc, f.color, { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: 256 }),
+      icon: NAIWA.tintSprite(f.src, f.color, { hue: f.hue || 0, sat: f.sat || 1, alpha: .7, size: 128 })
+    };
   });
 }
-function hitFx(p,dmg,from){
-  if(from===1){p.hurtT=0.3;p.hp=Math.max(0,p.hp-dmg);
-    addFloat(p.x,p.y-p.h-20,"-"+dmg,"#ff5a5a",26);
-    burst(p.x,p.y-p.h/2,"#ff5a5a",12);shake=0.25;}
+
+/* ---------------- 粒子 / 特效 ---------------- */
+function burst(x, y, color, n, spd) {
+  n = n || 12;
+  for (var i = 0; i < n; i++) {
+    var a = Math.random() * Math.PI * 2, s = (spd || 260) * (.35 + Math.random());
+    particles.push({
+      x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 70,
+      life: .35 + Math.random() * .45, t: 0, color: color, r: 2 + Math.random() * 4.5, g: 620
+    });
+  }
+}
+function floatText(x, y, txt, color, size, vy) {
+  floaters.push({ x: x, y: y, txt: txt, color: color, size: size || 22, t: 0, vy: vy === undefined ? -1.7 : vy });
+}
+function ring(x, y, color, r0, r1, dur, w) {
+  rings.push({ x: x, y: y, color: color, r0: r0, r1: r1, dur: dur || .35, t: 0, w: w || 4 });
+}
+function afterimage(e, color) {
+  afterimages.push({ x: e.x, y: e.y, w: e.w, h: e.h, face: e.face, src: e.def.src, color: color || e.def.color, t: 0, life: .3, rot: e.anim.rot });
 }
 
-/* ---------- 主循环 ---------- */
-let last=performance.now();
-function loop(now){
-  let dt=Math.min((now-last)/1000,0.05);last=now;
-  if(slowmo>0){slowmo-=dt;dt*=0.3;}
-  if(state==="run"){update(dt);roundT-=dt;if(roundT<=0)timeUp();}
-  draw();
-  requestAnimationFrame(loop);
+/* ---------------- 战斗数值 ---------------- */
+function hitboxOf(e) {
+  var m = e.move;
+  if (!m) return null;
+  var reach = m.range * (0.62 + 0.38 * (e.w / 96));
+  var cx = e.x + e.face * (reach + e.w * 0.12);
+  var cy = e.y - e.h * (m.hy === undefined ? .55 : m.hy);
+  var hw = (m.type === "projectile" ? 40 : reach * .62 + 14);
+  var hh = e.h * (m.hh === undefined ? .6 : m.hh) * .5;
+  return { x: cx, y: cy, hw: hw, hh: hh };
+}
+function hurtboxOf(e) {
+  var hh = e.h * (e.crouch ? .55 : .92) * .5;
+  return { x: e.x, y: e.y - hh, hw: e.w * .42, hh: hh };
+}
+function overlap(a, b) {
+  return Math.abs(a.x - b.x) < a.hw + b.hw && Math.abs(a.y - b.y) < a.hh + b.hh;
 }
 
-function update(dt){
-  /* --- 大奶蛙 玩家 --- */
-  if(!P1.dead){
-    P1.cd1=Math.max(0,P1.cd1-dt);P1.cd2=Math.max(0,P1.cd2-dt);
-    P1.atkT=Math.max(0,P1.atkT-dt);P1.hurtT=Math.max(0,P1.hurtT-dt);
-    let dir=0;
-    if(keys["a"])dir=-1;if(keys["d"])dir=1;
-    if(touchL!==null){
-      const r=cv.getBoundingClientRect();
-      dir=(touchL-r.left)/r.width<0.5*(P1.x/W*2-0.4)?-1:1;
-      dir=(Math.abs(touchL-r.left)/r.width*W-P1.x)/40;
-      dir=Math.max(-1,Math.min(1,dir));
-    }
-    P1.vx=dir*P1.speed;
-    if(dir!==0)P1.face=dir>0?1:-1;
-    if(keys["w"]&&P1.onGround){P1.vy=-P1.jumpP;P1.onGround=false;}
-    if(keys["j"])skill1();
-    if(keys["k"])skill2();
-  }else{P1.vx=0;}
-
-  /* --- 小奶蛙 AI --- */
-  if(!P2.dead){
-    P2.cd1=Math.max(0,P2.cd1-dt);P2.atkT=Math.max(0,P2.atkT-dt);P2.hurtT=Math.max(0,P2.hurtT-dt);
-    P2.aiT-=dt;
-    if(P2.playingDead){
-      P2.deadT-=dt;P2.vx=0;
-      if(P2.deadT<=0){
-        P2.playingDead=false;
-        // 装死结束 → 反扑
-        P2.face=P1.x>P2.x?1:-1;
-        P2.vx=P2.face*22;P2.atkT=0.4;
-        addFloat(P2.x,P2.y-P2.h-16,"装死结束！","#ff6ec7",18);
+function startMove(e, m, chainIdx) {
+  e.move = m; e.phase = "startup"; e.stateT = 0; e.hitDone = false;
+  e.state = m.type === "buff" ? "buff" : "attack";
+  e.chainIdx = chainIdx || 0;
+  if (m.meterCost) { e.meter = Math.max(0, e.meter - m.meterCost); }
+  if (m.invuln) e.invuln = Math.max(e.invuln, m.invuln);
+  if (m.armor) e.armor = Math.max(e.armor, m.armor);
+  if (m.type === "grab") e.grabbing = true;
+  if (m.type === "dash" && m.dashV) {
+    e.vx = e.face * m.dashV;
+    if (m.key === "s2" && e.def.id === "ninja") { /* 影分身瞬移：翻到对手身后 */
+      var foe = P[1 - e.side];
+      if (foe && Math.abs(foe.x - e.x) < 340) {
+        e.x = foe.x - e.face * 60; e.face = -e.face;
+        burst(e.x, e.y - e.h / 2, "#8a6bff", 22, 340);
+        ring(e.x, e.y - e.h / 2, "#8a6bff", 10, 90, .4, 3);
       }
-    }else{
-      const dist=P1.x-P2.x;
-      // AI 决策：接近→装死规避→反扑
-      if(P2.aiT<=0){
-        P2.aiT=0.5+Math.random()*0.6;
-        if(Math.abs(dist)<140&&Math.random()<0.5&&P2.cd1<=0){
-          P2.cd1=4.5;P2.playingDead=true;P2.deadT=1.8+Math.random()*0.7;
-          addFloat(P2.x,P2.y-P2.h-16,"装死！","#ff6ec7",20);
+    }
+  }
+  if (m.type === "buff") {
+    if (m.heal) { e.hp = Math.min(e.maxHp, e.hp + m.heal); floatText(e.x, e.y - e.h - 26, "+" + m.heal, "#7ec850", 30); }
+    ring(e.x, e.y - e.h / 2, "#7ec850", 8, 150, .6, 5);
+    burst(e.x, e.y - e.h / 2, "#7ec850", 26, 240);
+    NAIWA.audio.charge();
+  }
+  if (m.type === "aoe") {
+    /* 范围技在 active 阶段爆发 */
+  }
+  if (m.type === "counter") { e.counter = { t: 0, m: m }; }
+  if (NAIWA.audio) {
+    if (m.type === "projectile" || m.type === "aoe") NAIWA.audio.special();
+    else NAIWA.audio.swing();
+  }
+  if (m.selfDmg) { e.hp = Math.max(1, e.hp - m.selfDmg); floatText(e.x, e.y - e.h - 10, "-" + m.selfDmg, "#ff5a5a", 20); }
+}
+
+/* 命中处理 */
+function applyHit(att, def, m, contactX, contactY) {
+  if (def.invuln > 0 || def.dead) return false;
+
+  /* 反击技：防御方处于 counter 窗口 → 反打 */
+  if (def.counter && def.counter.t < def.counter.m.active) {
+    var cm = def.counter.m;
+    def.counter = null;
+    resolveHit(def, att, cm, def.x, def.y - def.h * .5, true);
+    floatText(def.x, def.y - def.h - 30, "反击!", "#22d3ee", 26);
+    return true;
+  }
+
+  var facing = (att.x - def.x) * def.face > 0;   // 面朝攻方
+  var canBlock = (def.guard || def.crouch) && facing && m.type !== "grab";
+  if (canBlock) {
+    /* 防御：削减伤害 + 防御槽 */
+    var chipDmg = Math.max(1, Math.round(m.dmg * (m.chip === undefined ? .18 : m.chip)));
+    def.hp = Math.max(1, def.hp - chipDmg);
+    def.blockstun = Math.round(8 + m.dmg * .4);
+    def.vx += att.face * 1.6;
+    def.meter = Math.min(100, def.meter + 4);
+    att.vx -= att.face * 1.2;
+    NAIWA.audio.block();
+    burst(contactX, contactY, "#22d3ee", 10, 200);
+    ring(contactX, contactY, "#22d3ee", 6, 44, .25, 3);
+    floatText(contactX, contactY - 16, "GUARD", "#22d3ee", 18);
+    state.shake = Math.max(state.shake, .12);
+    state.hitstop = Math.max(state.hitstop, 3);
+    return true;
+  }
+
+  /* 霸体：受击但不进入硬直（减伤 35%） */
+  var dmg = m.dmg;
+  if (def.armor > 0) { dmg = Math.round(dmg * .65); }
+
+  /* 连段伤害缩放（参考正统格斗） */
+  var scaling = [1, 1, .92, .84, .76, .68, .6, .52][Math.min(state.combo[att.side], 7)] || .45;
+  dmg = Math.max(1, Math.round(dmg * scaling));
+
+  resolveHit(att, def, m, contactX, contactY, false, dmg);
+  return true;
+}
+
+function resolveHit(att, def, m, cx, cy, isCounter, dmg) {
+  dmg = dmg || m.dmg;
+  def.hp = Math.max(0, def.hp - dmg);
+  def.hitFlash = 8;
+  var knockMul = isCounter ? 1.35 : 1;
+  def.vx += att.face * m.knock * knockMul * (1 / (def.def.weight || 1));
+  if (m.pop) def.vy += m.pop * knockMul;
+  if (def.armor <= 0) {
+    def.hitstun = Math.round(m.hitstun * (isCounter ? 1.4 : 1));
+    def.state = "hurt"; def.move = null;
+  }
+  def.invuln = Math.max(def.invuln, 4);
+  att.meter = Math.min(100, att.meter + (m.meterGain || 8));
+  if (m.drain) { def.meter = Math.max(0, def.meter - m.drain); floatText(def.x, def.y - def.h - 50, "-" + m.drain + " EN", "#8a6bff", 16); }
+  if (m.slow) { def.slow = m.slow; }
+  if (m.burn) { def.burn = m.burn; }
+
+  /* 连段统计 */
+  state.combo[att.side]++;
+  state.comboDmg[att.side] += dmg;
+  state.comboT[att.side] = 90;
+  state.stat.hits++; state.stat.dmg += dmg;
+  state.stat.maxCombo = Math.max(state.stat.maxCombo, state.combo[att.side]);
+
+  /* 打击感 */
+  var heavy = dmg >= 12;
+  state.hitstop = Math.max(state.hitstop, heavy ? 8 : 4);
+  state.shake = Math.max(state.shake, heavy ? .42 : .2);
+  state.slow = Math.max(state.slow, heavy ? .12 : 0);
+  burst(cx, cy, heavy ? "#ff5a5a" : "#ffd94d", heavy ? 22 : 12, heavy ? 380 : 240);
+  ring(cx, cy, heavy ? "#ff5a5a" : "#ffd94d", 4, heavy ? 80 : 50, .28, heavy ? 6 : 3);
+  floatText(cx, cy - 18, "-" + dmg, heavy ? "#ff5a5a" : "#ffd94d", heavy ? 30 : 22);
+  if (heavy) NAIWA.audio.hitHeavy(); else NAIWA.audio.hitLight();
+
+  if (def.hp <= 0 && !def.dead) knockout(def);
+}
+
+/* 击倒 */
+function knockout(e) {
+  e.dead = true; e.koT = 0; e.state = "ko"; e.vx = e.face * -6; e.vy = -10;
+  NAIWA.audio.ko();
+  state.slow = 1.1; state.shake = .8; state.flash = .5;
+  ring(e.x, e.y - e.h / 2, "#fff", 10, 260, .7, 8);
+  burst(e.x, e.y - e.h / 2, "#ff5a5a", 40, 420);
+}
+
+/* ---------------- AI ---------------- */
+function aiThink(e, foe, dt) {
+  if (state.mode === "training") { e.vx *= .8; return; }
+  var A = DIFFS[state.diff].ai;
+  e.ai.t -= 1;
+  var dist = Math.abs(foe.x - e.x);
+  var toward = foe.x > e.x ? 1 : -1;
+
+  /* 面向对手 */
+  if (e.hitstun <= 0 && e.state !== "attack") e.face = toward;
+
+  /* 反应式防御 */
+  if (foe.state === "attack" && dist < 150 && Math.random() < A.block && e.hitstun <= 0) {
+    e.guard = true; e.crouch = Math.random() < .4;
+    e.ai.hold = 14;
+  }
+  if (e.ai.hold > 0) { e.ai.hold--; if (e.ai.hold <= 0) { e.guard = false; e.crouch = false; } }
+
+  if (e.ai.t > 0 || e.hitstun > 0 || e.state === "attack" || e.state === "buff") {
+    if (e.state !== "attack" && !e.guard) e.vx *= .86;
+    return;
+  }
+  e.ai.t = A.react + Math.random() * 16;
+
+  var r = Math.random();
+  /* 能量满了优先放超必杀 */
+  if (e.meter >= 100 && r < A.aggr * .8 && dist < 320) { startMove(e, e.def.moves.s3); e.meter = 0; return; }
+  /* 血量低用治疗/增益 */
+  if (e.hp < e.maxHp * .35 && e.def.moves.s3.type === "buff" && e.meter >= 50 && r < .5) { startMove(e, e.def.moves.s3); return; }
+  /* 近身：抓取 / 连段 */
+  if (dist < 110) {
+    if (r < .16 * (1 + A.aggr)) { startMove(e, e.def.moves.grab); return; }
+    if (r < .62) { startMove(e, e.def.moves.light, 0); return; }
+    if (r < .74) { startMove(e, e.def.moves.heavy); return; }
+    if (r < .8 && e.def.moves.s2.type === "dash") { startMove(e, e.def.moves.s2); return; }
+    if (r < .86) { e.guard = true; e.ai.hold = 18; return; }
+    e.vx = -toward * e.def.speed * .7;
+    return;
+  }
+  /* 中距离 */
+  if (dist < 380) {
+    if (r < .34 * (1 + A.aggr) && e.def.moves.s1) { startMove(e, e.def.moves.s1); return; }
+    if (r < .46) { startMove(e, e.def.moves.s2); return; }
+    if (r < .8) { e.vx = toward * e.def.speed; if (Math.random() < .12 && e.onGround) { e.vy = -e.def.jump; e.onGround = false; } return; }
+    if (NAIWA.rand(0, 1) < A.tech && e.onGround) { e.vx = toward * e.def.dashV; e.dashT = 10; return; }
+    e.vx = -toward * e.def.speed * .5;
+    return;
+  }
+  /* 远距离：靠近或用远程 */
+  if (r < .3 && e.def.moves.s1 && e.def.moves.s1.type === "projectile") { startMove(e, e.def.moves.s1); return; }
+  e.vx = toward * e.def.speed;
+}
+
+/* ---------------- 主更新 ---------------- */
+function update() {
+  var dt = 1;
+  if (state.hitstop > 0) { state.hitstop--; return; }
+  if (state.slow > 0) { state.slow -= .016; }
+
+  var live = state.phase === "fight";
+
+  for (var s = 0; s < 2; s++) {
+    var e = P[s], foe = P[1 - s];
+    if (!e) continue;
+
+    /* 计时器衰减 */
+    e.invuln = Math.max(0, e.invuln - dt);
+    e.armor = Math.max(0, e.armor - dt);
+    e.hitFlash = Math.max(0, e.hitFlash - dt);
+    /* 冻结状态：只拖慢"这一个"角色，不能污染全局帧推进 */
+    e.slow = Math.max(0, e.slow - dt);
+    var sp = e.slow > 0 ? Math.max(.55, 1 - e.slow * .3) : 1;
+    if (e.burn > 0) {
+      e.burn -= .016;
+      if (Math.random() < .3) { e.hp = Math.max(0, e.hp - .4); burst(e.x, e.y - e.h * .6, "#ff8a3c", 2, 90); }
+    }
+    e.stateT++;
+    if (e.hitstun > 0) e.hitstun -= dt;
+    if (e.blockstun > 0) e.blockstun -= dt;
+    if (e.chainT > 0) e.chainT--; else if (e.state !== "attack") e.chainIdx = 0;
+
+    /* AI / 输入 */
+    if (!e.dead && live && e.hitstun <= 0 && e.blockstun <= 0) {
+      var isAI = (state.mode === "cpu" && s === 1) || (state.mode === "survival" && s === 1) || (state.mode === "training" && s === 1);
+      if (isAI) {
+        aiThink(e, foe, dt);
+      } else if (e.state !== "buff") {
+        playerControl(e, s, foe);
+      }
+    } else if (e.dead) {
+      e.vx *= .94;
+    } else {
+      e.vx *= .9;
+    }
+
+    /* 招式推进 */
+    if (e.move) advanceMove(e, foe);
+
+    /* 物理（sp 为该角色自己的时间缩放） */
+    e.vy += (e.onGround ? 0 : GRAV) * sp;
+    e.x += e.vx * sp; e.y += e.vy * sp;
+    e.vx *= e.onGround ? (Math.abs(e.vx) > 8 ? .93 : FRIC) : AIR_FRIC;
+    if (Math.abs(e.vx) < .06) e.vx = 0;
+
+    if (e.y >= GROUND) {
+      if (!e.onGround && e.vy > 6) { burst(e.x, GROUND, "#8b93c8", 8, 150); }
+      e.y = GROUND; e.vy = 0;
+      if (!e.onGround) { e.onGround = true; e.jumps = 0; }
+    } else { e.onGround = false; }
+
+    /* 墙 */
+    if (e.x < WALL_L + e.w / 2) { e.x = WALL_L + e.w / 2; if (e.vx < -6 && e.hitstun > 0) { e.vx = -e.vx * .4; state.shake = Math.max(state.shake, .3); burst(e.x, e.y - e.h / 2, "#ffd94d", 10, 220); } else e.vx = Math.max(0, e.vx); }
+    if (e.x > WALL_R - e.w / 2) { e.x = WALL_R - e.w / 2; if (e.vx > 6 && e.hitstun > 0) { e.vx = -e.vx * .4; state.shake = Math.max(state.shake, .3); burst(e.x, e.y - e.h / 2, "#ffd94d", 10, 220); } else e.vx = Math.min(0, e.vx); }
+
+    /* 影子残像 */
+    if (Math.abs(e.vx) > 9 || (e.state === "attack" && e.move && e.move.type === "dash")) {
+      if (e.stateT % 2 === 0) afterimage(e, e.def.accent);
+    }
+
+    /* 动画姿态 */
+    var targetLean = e.vx * .016 * e.face;
+    e.anim.lean += (targetLean - e.anim.lean) * .2;
+    e.anim.scale += ((e.onGround ? 1 : 1.05) - e.anim.scale) * .12;
+    if (e.state === "hurt") e.anim.rot = e.face * -.18;
+    else if (e.state === "attack") e.anim.rot = e.face * .08;
+    else e.anim.rot += (0 - e.anim.rot) * .2;
+  }
+
+  /* 对手推挤（防止重叠） */
+  if (P[0] && P[1]) {
+    var a = P[0], b = P[1], d = b.x - a.x, minD = (a.w + b.w) * .34;
+    if (Math.abs(d) < minD) {
+      var push = (minD - Math.abs(d)) * .5 * (d >= 0 ? 1 : -1);
+      a.x -= push * .5; b.x += push * .5;
+      a.x = NAIWA.clamp(a.x, WALL_L + a.w / 2, WALL_R - a.w / 2);
+      b.x = NAIWA.clamp(b.x, WALL_L + b.w / 2, WALL_R - b.w / 2);
+    }
+  }
+
+  /* 投射物 */
+  for (var i = projectiles.length - 1; i >= 0; i--) {
+    var p = projectiles[i];
+    p.t++;
+    if (p.gravity) p.vy += p.gravity;
+    p.x += p.vx; p.y += p.vy;
+    if (p.grow) p.r += p.grow * .5;
+    if (p.t % 2 === 0) particles.push({ x: p.x, y: p.y, vx: NAIWA.rand(-30, 30), vy: NAIWA.rand(-30, 30), life: .3, t: 0, color: p.color, r: p.r * .35, g: 0 });
+    var owner = P[p.side], foe = P[1 - p.side];
+    if (foe && !foe.dead && p.t > 2) {
+      var hb = hurtboxOf(foe);
+      if (Math.abs(p.x - hb.x) < p.r + hb.hw && Math.abs(p.y - hb.y) < p.r + hb.hh) {
+        var hit = applyHit(owner, foe, p.move, p.x, p.y);
+        if (!p.pierce) p.dead = true; else p.pierce--;
+        if (p.drain) { /* 暗影球吸能已在 resolveHit 处理 */ }
+      }
+    }
+    if (p.y > GROUND) { burst(p.x, GROUND, p.color, 8, 180); p.dead = true; }
+    if (p.x < -60 || p.x > W + 60 || p.t > p.life) p.dead = true;
+    if (p.dead) projectiles.splice(i, 1);
+  }
+
+  /* 特效 */
+  for (var j = particles.length - 1; j >= 0; j--) {
+    var q = particles[j]; q.t += .016;
+    q.x += q.vx * .016; q.y += q.vy * .016; q.vy += (q.g || 500) * .016;
+    if (q.t >= q.life) particles.splice(j, 1);
+  }
+  for (var k = floaters.length - 1; k >= 0; k--) {
+    var f = floaters[k]; f.t += .016; f.y += f.vy;
+    if (f.t > 1.1) floaters.splice(k, 1);
+  }
+  for (var m2 = afterimages.length - 1; m2 >= 0; m2--) {
+    afterimages[m2].t += .016;
+    if (afterimages[m2].t > afterimages[m2].life) afterimages.splice(m2, 1);
+  }
+  for (var r2 = rings.length - 1; r2 >= 0; r2--) {
+    rings[r2].t += .016;
+    if (rings[r2].t > rings[r2].dur) rings.splice(r2, 1);
+  }
+
+  /* 连段计数衰减 */
+  for (var c = 0; c < 2; c++) {
+    if (state.comboT[c] > 0) {
+      state.comboT[c]--;
+      if (state.comboT[c] === 0) { state.combo[c] = 0; state.comboDmg[c] = 0; }
+    }
+  }
+
+  /* 回合计时 */
+  if (live && state.mode !== "training") {
+    state.timer -= 1 / 60;
+    if (state.timer <= 0) { state.timer = 0; timeUp(); }
+  }
+  state.stat.time += 1 / 60;
+
+  /* 死亡结算 */
+  if (live) {
+    for (var s2 = 0; s2 < 2; s2++) {
+      if (P[s2] && P[s2].dead) { P[s2].koT++; }
+    }
+    if (P[0] && P[1] && P[0].dead !== P[1].dead && Math.max(P[0].koT, P[1].koT) > 76) {
+      endRound(P[1].dead ? 0 : 1);
+    }
+  }
+}
+
+/* 玩家操作 */
+function canAct(e) {
+  return !e.dead && e.hitstun <= 0 && e.blockstun <= 0 &&
+         e.state !== "attack" && e.state !== "hurt" && e.state !== "ko" && e.state !== "buff";
+}
+function playerControl(e, side, foe) {
+  if (e.dead) return;
+  var left = side === 0 ? "a" : "left";
+  var right = side === 0 ? "d" : "right";
+  var up = side === 0 ? "w" : "up";
+  var down = side === 0 ? "s" : "down";
+  var kJ = side === 0 ? "j" : "numpad1";
+  var kK = side === 0 ? "k" : "numpad2";
+  var kL = side === 0 ? "l" : "numpad3";
+  var kU = side === 0 ? "u" : "numpad4";
+  var kI = side === 0 ? "i" : "numpad5";
+  var kO = side === 0 ? "o" : "numpad0";
+  var kP = side === 0 ? "p" : "numpad6";
+  var kG = side === 0 ? "g" : "numpad7";
+
+  /* 防御 */
+  e.guard = !!keys[kP] || (!!keys[down] && Math.abs(foe.x - e.x) < 200 && (foe.x - e.x) * e.face > 0 && foe.state === "attack");
+  e.crouch = !!keys[down];
+  if (e.guard) e.vx *= .5;
+
+  /* 抓取 */
+  if (canAct(e) && (pressed(kG) || (pressed(kK) && pressed(kU)))) { consume(kG); consume(kK); consume(kU); startMove(e, e.def.moves.grab); return; }
+
+  /* 超必杀 */
+  if (canAct(e) && pressed(kO)) { consume(kO); if (e.meter >= 100) { startMove(e, e.def.moves.s3); return; } else { NAIWA.audio.error(); floatText(e.x, e.y - e.h - 20, "能量不足", "#8b93c8", 15); } }
+  /* 技② */
+  if (canAct(e) && pressed(kI)) { consume(kI); if (!e.def.moves.s2.meterCost || e.meter >= e.def.moves.s2.meterCost) { startMove(e, e.def.moves.s2); return; } else { NAIWA.audio.error(); floatText(e.x, e.y - e.h - 20, "能量不足", "#8b93c8", 15); } }
+  /* 技① */
+  if (canAct(e) && pressed(kL)) { consume(kL); startMove(e, e.def.moves.s1); return; }
+  /* 挑击 */
+  if (canAct(e) && pressed(kU)) { consume(kU); startMove(e, e.def.moves.up); return; }
+  /* 重攻 */
+  if (canAct(e) && pressed(kK)) { consume(kK); startMove(e, e.def.moves.heavy); return; }
+  /* 轻攻（连段 + 空中攻击） */
+  if (canAct(e) && pressed(kJ)) {
+    consume(kJ);
+    if (!e.onGround) { startMove(e, e.def.moves.air); return; }
+    var mv = e.chainIdx === 0 ? e.def.moves.light : e.chainIdx === 1 ? e.def.moves.light2 : e.def.moves.light3;
+    startMove(e, mv, e.chainIdx);
+    e.chainIdx = Math.min(2, e.chainIdx + 1);
+    e.chainT = 30;
+    return;
+  }
+
+  /* 移动 */
+  var mvx = 0;
+  if (keys[left]) mvx -= 1;
+  if (keys[right]) mvx += 1;
+  if (mvx !== 0) e.face = mvx > 0 ? 1 : -1;
+
+  /* 冲刺 */
+  if (keys.shift && e.onGround && mvx !== 0 && e.dashT <= 0) {
+    e.dashT = 12; e.vx = mvx * e.def.dashV;
+    burst(e.x - mvx * 20, e.y - 6, e.def.accent, 8, 180);
+  }
+  if (e.dashT > 0) { e.dashT--; mvx = 0; }
+
+  if (!e.crouch) { e.vx += mvx * e.def.speed * .34; }
+  var maxv = e.def.speed * (e.onGround ? 1 : 1.15);
+  if (Math.abs(e.vx) > maxv) e.vx = Math.sign(e.vx) * maxv;
+
+  /* 跳跃 / 二段跳 */
+  if (pressed(up)) {
+    consume(up);
+    if (e.onGround) { e.vy = -e.def.jump; e.onGround = false; e.jumps = 1; burst(e.x, GROUND, "#8b93c8", 8, 160); }
+    else if (e.jumps < e.maxJumps) {
+      e.jumps++; e.vy = -e.def.jump * .88;
+      ring(e.x, e.y - e.h * .3, e.def.accent, 4, 52, .3, 3);
+      burst(e.x, e.y - e.h * .3, e.def.accent, 10, 180);
+    }
+  }
+  /* 下坠加速 */
+  if (keys[down] && !e.onGround) e.vy += .8;
+}
+
+/* 招式帧推进 */
+function advanceMove(e, foe) {
+  var m = e.move;
+  if (!m) return;
+  var total = m.startup + m.active + m.recovery;
+  var t = e.stateT;
+
+  if (t <= m.startup) e.phase = "startup";
+  else if (t <= m.startup + m.active) {
+    if (e.phase !== "active") {
+      e.phase = "active";
+      /* 投射物生成 */
+      if (m.type === "projectile" && m.proj && !e.hitDone) {
+        e.hitDone = true;
+        var n = m.proj.count || 1;
+        for (var i = 0; i < n; i++) {
+          (function (i) {
+            setTimeout(function () {
+              if (!P[e.side] || P[e.side].dead) return;
+              projectiles.push({
+                x: e.x + e.face * (e.w * .5 + 16), y: e.y - e.h * .55 + (i - (n - 1) / 2) * 22,
+                vx: e.face * m.proj.vx, vy: (m.proj.vy || 0) + (i - (n - 1) / 2) * .5,
+                r: m.proj.r, life: m.proj.life, side: e.side, move: m, color: e.def.accent,
+                pierce: m.proj.pierce || 0, gravity: m.proj.gravity || 0, grow: m.proj.grow || 0,
+                drain: m.proj.drain || 0, dead: false, t: 0
+              });
+              burst(e.x + e.face * 40, e.y - e.h * .55, e.def.accent, 8, 200);
+            }, i * 80);
+          })(i);
+        }
+        NAIWA.audio.special();
+      }
+      /* 范围技生成持续判定 */
+      if (m.type === "aoe" && m.aoe) {
+        e.aoeT = m.aoe.dur * 60;
+        e.aoeR = m.aoe.r; e.aoeH = m.aoe.h;
+        ring(e.x + e.face * 30, e.y, e.def.accent, 10, m.aoe.r, .5, 7);
+        ring(e.x + e.face * 30, e.y, "#fff", 6, m.aoe.r * .6, .35, 4);
+        state.shake = Math.max(state.shake, .5); state.flash = .28;
+        NAIWA.audio.super();
+      }
+    }
+    /* 近战判定 */
+    if (m.type === "melee" || m.type === "grab" || m.type === "dash" || m.type === "counter") {
+      var hb = hitboxOf(e), hb2 = hurtboxOf(foe);
+      if (hb && !e.hitDone && !foe.dead && overlap(hb, hb2)) {
+        if (m.type === "counter") { /* 反击已由被击触发 */ }
+        else {
+          var ok = applyHit(e, foe, m, (hb.x + hb2.x) / 2, (hb.y + hb2.y) / 2);
+          if (ok) { e.hitDone = true; if (m.type === "grab") { e.vx = 0; foe.vx = 0; } }
         }
       }
-      if(!P2.playingDead&&Math.abs(P2.vx)<6){
-        if(Math.abs(dist)>110){P2.face=dist>0?1:-1;P2.vx=P2.face*P2.speed;}
-        else{P2.vx=0;
-          if(P2.atkT<=0){P2.atkT=0.3; // 近身撞击
-            if(Math.abs(dist)<P2.w+P1.w/2&&P1.hurtT<=0&&P2.y+P2.h>=P1.y-P1.h){
-              hitFx(P1,5,2);
-            }
+    }
+  } else {
+    e.phase = "recovery";
+    if (m.type === "aoe" && e.aoeT > 0) e.aoeT--;
+  }
+
+  /* 范围技持续伤害 */
+  if (m.type === "aoe" && e.phase === "active" && e.aoeT > 0 && !foe.dead) {
+    e.aoeT--;
+    var hb3 = hurtboxOf(foe);
+    var cx = e.x + e.face * 30;
+    if (Math.abs(foe.x - cx) < (e.aoeR || 150) && foe.y > e.y - (e.aoeH || 200) - 40) {
+      if (e.stateT % 9 === 0) {
+        var dm = Math.max(1, Math.round(m.dmg / 4));
+        applyHit(e, foe, { dmg: dm, chip: m.chip, hitstun: 12, knock: 2, pop: -2, meterGain: 3, type: "aoe" }, foe.x, foe.y - foe.h * .5);
+      }
+    }
+    if (e.stateT % 4 === 0) burst(cx + NAIWA.rand(-e.aoeR * .6, e.aoeR * .6), e.y - NAIWA.rand(0, e.aoeH * .8), e.def.accent, 3, 140);
+  }
+
+  /* 前冲位移 */
+  if (m.type === "dash") {
+    if (e.phase === "startup") e.vx *= .9;
+    else if (e.phase === "active") e.vx = e.face * (m.dashV || 14);
+    else e.vx *= .86;
+  }
+  if (m.type === "projectile" && e.phase === "startup") e.vx *= .82;
+
+  /* 反击窗口计时 */
+  if (e.counter) { e.counter.t++; if (e.counter.t > m.active) e.counter = null; }
+
+  if (t >= total) { e.move = null; e.state = "idle"; e.stateT = 0; e.grabbing = false; e.aoeT = 0; }
+}
+
+/* ---------------- 回合流程 ---------------- */
+function announceText(txt, color, size, dur) {
+  announce.textContent = txt;
+  announce.style.color = color || "#ff5a5a";
+  announce.style.fontSize = size || "min(17vw,150px)";
+  announce.style.textShadow = "0 0 40px " + (color || "#ff5a5a") + ",0 0 90px " + (color || "#ff5a5a") + "80";
+  announce.classList.remove("show");
+  void announce.offsetWidth;
+  announce.classList.add("show");
+}
+
+function startMatch() {
+  var f1 = F.byIndex(state.pick[0]), f2 = F.byIndex(state.pick[1]);
+  P[0] = makeEnt(f1.id, 0, f1);
+  P[1] = makeEnt(f2.id, 1, f2);
+  /* 生存模式：对手血量随进度提升 */
+  if (state.mode === "survival") {
+    P[1].maxHp = Math.round(f2.hp * (1 + state.ladder * .18));
+    P[1].hp = P[1].maxHp;
+  }
+  if (state.mode === "cpu") {
+    P[1].maxHp = Math.round(f2.hp * (1 + state.ladder * .1));
+    P[1].hp = P[1].maxHp;
+    P[1].meter = Math.min(100, state.ladder * 18);
+  }
+  projectiles = []; particles = []; floaters = []; afterimages = []; rings = [];
+  state.wins = [0, 0]; state.round = 1;
+  state.stat = { hits: 0, maxCombo: 0, dmg: 0, time: 0 };
+  state.combo = [0, 0]; state.comboDmg = [0, 0]; state.comboT = [0, 0];
+  hud.root.style.display = "flex";
+  syncHudNames();
+  nextRound();
+}
+
+function syncHudNames() {
+  for (var s = 0; s < 2; s++) {
+    if (!P[s]) continue;
+    hud.n[s].textContent = P[s].def.name + (s === 1 && state.mode !== "versus" ? " (CPU)" : "");
+    hud.t[s].textContent = P[s].def.title;
+  }
+}
+
+function nextRound() {
+  var f1 = F.byIndex(state.pick[0]), f2 = F.byIndex(state.pick[1]);
+  P[0].hp = P[0].maxHp; P[0].meter = state.mode === "survival" ? Math.min(100, P[0].meter) : 0;
+  P[1].hp = P[1].maxHp; P[1].meter = 0;
+  [P[0], P[1]].forEach(function (e, i) {
+    e.x = i === 0 ? W * .28 : W * .72; e.y = GROUND; e.vx = 0; e.vy = 0;
+    e.dead = false; e.koT = 0; e.state = "idle"; e.move = null; e.hitstun = 0;
+    e.guard = false; e.crouch = false; e.invuln = 30; e.armor = 0;
+    e.face = i === 0 ? 1 : -1; e.onGround = true; e.slow = 0; e.burn = 0;
+  });
+  projectiles = [];
+  state.timer = state.mode === "training" ? 999 : 99;
+  state.phase = "announce";
+  hud.roundTxt.textContent = "ROUND " + state.round;
+  announceText("ROUND " + state.round, "#ffd94d", "min(11vw,96px)");
+  NAIWA.audio.round();
+  setTimeout(function () { if (state.phase === "announce") { announceText("FIGHT!", "#ff5a5a", "min(15vw,132px)"); } }, 900);
+  setTimeout(function () {
+    if (state.phase === "announce") { state.phase = "fight"; announce.classList.remove("show"); }
+  }, 1750);
+}
+
+function timeUp() {
+  if (state.phase !== "fight") return;
+  var w = P[0].hp / P[0].maxHp >= P[1].hp / P[1].maxHp ? 0 : 1;
+  announceText("TIME UP", "#22d3ee", "min(12vw,104px)");
+  setTimeout(function () { endRound(w); }, 800);
+  state.phase = "ko";
+}
+
+function endRound(winner) {
+  state.phase = "ko";
+  state.wins[winner]++;
+  state.slow = .8;
+  setTimeout(function () {
+    announceText(winner === 0 ? "K.O." : "K.O.", "#ff5a5a", "min(17vw,150px)");
+  }, 200);
+  setTimeout(function () {
+    if (state.wins[winner] >= MODES[state.mode].wins) {
+      /* 生存模式：连胜继续 */
+      if (state.mode === "survival" && winner === 0) {
+        state.ladder++;
+        state.pick[1] = NAIWA.randInt(0, F.list.length - 1);
+        P[0].hp = Math.min(P[0].maxHp, P[0].hp + P[0].maxHp * .3);
+        startMatch();
+        return;
+      }
+      if (state.mode === "cpu" && winner === 0 && state.ladder < 5) {
+        state.ladder++;
+        state.pick[1] = NAIWA.randInt(0, F.list.length - 1);
+        if (state.ladder >= 5) state.pick[1] = F.list.length - 1; // 最终 BOSS
+        startMatch();
+        NAIWA.toast("连胜 " + state.ladder + " 场！下场对手已就位 🐸", "#ffd94d");
+        return;
+      }
+      showResult(winner);
+    } else {
+      state.round++;
+      nextRound();
+    }
+  }, 1900);
+}
+
+function showResult(winner) {
+  state.phase = "over";
+  var win = winner === 0;
+  $("resTitle").textContent = win ? "🏆 你赢了！" : "😵 你输了…";
+  $("resDesc").textContent = win
+    ? "奶蛙军团向你低头。这一局的连段、超杀时机都写进了观测数据。"
+    : "对手的防守太稳了——试试用挑击起手接浮空，或者攒满能量放超必杀。";
+  var acc = state.stat.hits ? Math.round(state.stat.dmg / state.stat.hits * 10) / 10 : 0;
+  $("resBox").innerHTML =
+    '<div class="k">总命中</div><div class="v">' + state.stat.hits + ' 次</div>' +
+    '<div class="k">最高连段</div><div class="v">' + state.stat.maxCombo + ' HITS</div>' +
+    '<div class="k">总伤害</div><div class="v">' + Math.round(state.stat.dmg) + '</div>' +
+    '<div class="k">平均单次伤害</div><div class="v">' + acc + '</div>' +
+    '<div class="k">对战时长</div><div class="v">' + Math.floor(state.stat.time / 60) + '分' + Math.round(state.stat.time % 60) + '秒</div>' +
+    '<div class="k">模式</div><div class="v">' + MODES[state.mode].name + '</div>';
+  /* 记录 */
+  var rec = NAIWA.store.get("battle", { wins: 0, loses: 0, best: 0, ladder: 0 });
+  if (win) rec.wins++; else rec.loses++;
+  rec.best = Math.max(rec.best || 0, state.stat.maxCombo);
+  rec.ladder = Math.max(rec.ladder || 0, state.ladder);
+  NAIWA.store.set("battle", rec);
+  refreshRec();
+  $("result").classList.remove("hidden");
+}
+
+function refreshRec() {
+  var rec = NAIWA.store.get("battle", null);
+  if (!rec) { $("recTxt").textContent = ""; return; }
+  $("recTxt").textContent = "战绩：胜 " + (rec.wins || 0) + " / 负 " + (rec.loses || 0) +
+    " · 最高连段 " + (rec.best || 0) + " HITS · 最高连胜 " + (rec.ladder || 0);
+}
+
+/* ---------------- 渲染 ---------------- */
+var stageCfg = F.stages[0];
+var time = 0;
+var bgStars = [];
+for (var i = 0; i < 90; i++) bgStars.push({ x: Math.random() * W, y: Math.random() * (GROUND - 40), r: Math.random() * 1.6 + .4, p: Math.random() * 6.28 });
+
+function drawStage() {
+  var st = stageCfg;
+  var g = ctx.createLinearGradient(0, 0, 0, GROUND);
+  g.addColorStop(0, st.sky[0]); g.addColorStop(1, st.sky[1]);
+  ctx.fillStyle = g;
+  ctx.fillRect(-40, -40, W + 80, GROUND + 80);
+
+  /* 视差背景层 */
+  var px = 0;
+  if (P[0] && P[1]) px = (W / 2 - (P[0].x + P[1].x) / 2) * .06;
+
+  if (st.props === "stars" || st.props === "grid") {
+    for (var i2 = 0; i2 < bgStars.length; i2++) {
+      var s = bgStars[i2];
+      var tw = .4 + .6 * Math.abs(Math.sin(time * .001 + s.p));
+      ctx.fillStyle = "rgba(255,255,255," + (tw * .55) + ")";
+      ctx.beginPath(); ctx.arc(s.x + px * .4, s.y, s.r, 0, 7); ctx.fill();
+    }
+  }
+  if (st.props === "grid") {
+    ctx.strokeStyle = NAIWA.rgba(st.accent, .16); ctx.lineWidth = 1;
+    var off = (time * .04) % 60;
+    for (var gx = -60 + off; gx < W + 60; gx += 60) {
+      ctx.beginPath(); ctx.moveTo(gx + px * .5, 0); ctx.lineTo(gx + px * .5, GROUND); ctx.stroke();
+    }
+    for (var gy = 0; gy < GROUND; gy += 60) {
+      var yy = gy + (time * .02) % 60;
+      ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke();
+    }
+  }
+  if (st.props === "city") {
+    /* 霓虹楼群 */
+    var seed = 7;
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    for (var b = 0; b < 16; b++) {
+      var bw = 50 + rnd() * 70, bh = 90 + rnd() * 230, bx = b * 74 - 40 + px * .7;
+      ctx.fillStyle = "rgba(8,12,34,.92)";
+      ctx.fillRect(bx, GROUND - bh, bw, bh);
+      ctx.strokeStyle = NAIWA.rgba(b % 2 ? "#22d3ee" : "#ff6ec7", .35);
+      ctx.lineWidth = 1.5; ctx.strokeRect(bx + .5, GROUND - bh + .5, bw - 1, bh - 1);
+      for (var wy = GROUND - bh + 14; wy < GROUND - 12; wy += 22) {
+        for (var wx = bx + 8; wx < bx + bw - 12; wx += 18) {
+          if (rnd() > .55) {
+            ctx.fillStyle = NAIWA.rgba(rnd() > .5 ? "#ffd94d" : "#22d3ee", .3 + rnd() * .4);
+            ctx.fillRect(wx, wy, 7, 10);
           }
         }
       }
     }
-  }else{P2.vx=0;}
-
-  // 物理
-  for(const p of [P1,P2]){
-    p.vy+=0.8;
-    p.x+=p.vx*dt*60/60*(p.vx?1:0);
-    p.x+=p.vx; // frame-based 简化
-    p.vx*=0.86;
-    p.y+=p.vy;
-    if(p.y>=GROUND){p.y=GROUND;p.vy=0;p.onGround=true;}
-    p.x=Math.max(p.w/2+20,Math.min(W-p.w/2-20,p.x));
   }
-  // 反扑伤害判定（小奶蛙 atkT 期间撞到大奶蛙）
-  if(!P2.dead&&P2.atkT>0.2&&Math.abs(P2.vx)>8){
-    const d=Math.hypot(P2.x-P1.x,P2.y-P1.y);
-    if(d<(P2.w+P1.w)/2&&P1.hurtT<=0){hitFx(P1,14,2);P2.vx*=-0.4;}
-  }
-
-  /* --- 投射物 --- */
-  for(const pr of projectiles){
-    pr.t=(pr.t||0)+dt;
-    if(pr.type==="laugh"){
-      pr.x+=pr.vx;pr.r+=1.2;
-      // 命中
-      const target=pr.from===1?P2:P1;
-      if(!pr.hit&&!target.dead&&!target.playingDead){
-        if(Math.abs(pr.x-target.x)<target.w/2+pr.r&&Math.abs(pr.y-(target.y-target.h/2))<target.h){
-          pr.hit=true;hitFx(target,pr.dmg,pr.from);
-        }
-      }
-    }else if(pr.type==="tear"){
-      pr.vy+=pr.ay;pr.x+=pr.vx;pr.y+=pr.vy;
-      const target=pr.from===1?P2:P1;
-      if(!pr.hit&&!target.dead&&!target.playingDead){
-        if(Math.abs(pr.x-target.x)<target.w/2+pr.r&&pr.y>target.y-target.h&&pr.y<target.y){
-          pr.hit=true;hitFx(target,pr.dmg,pr.from);
-        }
-      }
-      if(pr.y>=GROUND){pr.hit=true;burst(pr.x,GROUND,"#5aa8ff",4);}
+  if (st.props === "torii") {
+    /* 鸟居 + 樱花 */
+    ctx.strokeStyle = "rgba(255,90,90,.85)"; ctx.lineWidth = 14;
+    var tx = W * .5 + px * .8;
+    ctx.beginPath(); ctx.moveTo(tx - 190, GROUND); ctx.lineTo(tx - 170, GROUND - 300); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tx + 190, GROUND); ctx.lineTo(tx + 170, GROUND - 300); ctx.stroke();
+    ctx.lineWidth = 18;
+    ctx.beginPath(); ctx.moveTo(tx - 260, GROUND - 300); ctx.lineTo(tx + 260, GROUND - 300); ctx.stroke();
+    ctx.lineWidth = 12;
+    ctx.beginPath(); ctx.moveTo(tx - 230, GROUND - 240); ctx.lineTo(tx + 230, GROUND - 240); ctx.stroke();
+    for (var pt = 0; pt < 34; pt++) {
+      var t3 = (time * .0006 + pt * .19) % 1;
+      var fx = (pt * 137 % W) + Math.sin(time * .001 + pt) * 40 + px * 1.2;
+      var fy = t3 * GROUND;
+      ctx.fillStyle = "rgba(255,183,206," + (.25 + .35 * (1 - t3)) + ")";
+      ctx.beginPath(); ctx.ellipse(fx, fy, 5, 3.4, time * .002 + pt, 0, 7); ctx.fill();
     }
   }
-  projectiles=projectiles.filter(p=>!p.hit&&p.x>-80&&p.x<W+80&&p.y<H+40);
 
-  /* --- 特效粒子 --- */
-  for(const p of parts){p.t+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=300*dt;}
-  parts=parts.filter(p=>p.t<p.life);
-  for(const f of floaters){f.t+=dt;f.y+=f.vy;}
-  floaters=floaters.filter(f=>f.t<1.2);
+  /* 场地雾 */
+  var fg = ctx.createLinearGradient(0, GROUND - 260, 0, GROUND);
+  fg.addColorStop(0, "rgba(0,0,0,0)"); fg.addColorStop(1, st.fog);
+  ctx.fillStyle = fg; ctx.fillRect(0, GROUND - 260, W, 260);
 
-  /* --- 胜负 --- */
-  if(!P2.dead&&P2.hp<=0){P2.dead=true;endRound("win");}
-  if(!P1.dead&&P1.hp<=0){P1.dead=true;endRound("lose");}
-}
-
-function timeUp(){
-  endRound(P1.hp>P2.hp?"win":"lose");
-}
-function endRound(res){
-  state="end";slowmo=0.9;shake=0.5;
-  const ko=document.getElementById("koText");
-  ko.classList.remove("show");void ko.offsetWidth;ko.classList.add("show");
-  setTimeout(()=>{
-    document.getElementById("endTitle").textContent=res==="win"?"🏆 大奶蛙获胜！":"😵 小奶蛙获胜！";
-    document.getElementById("endDesc").textContent=res==="win"
-      ?"你的笑声震碎了一切！小奶蛙装死也没用——这就是大奶蛙的压迫感。"
-      :"小奶蛙的装死战术成功了……下次算准他起身的瞬间再出手！";
-    document.getElementById("endScreen").classList.remove("hidden");
-  },1400);
-}
-
-/* ---------- 渲染 ---------- */
-function drawChar(p){
-  const img=p.atkT>0?IMGS[p.atkImg]:IMGS[p.img];
+  /* 地面 */
+  var gg = ctx.createLinearGradient(0, GROUND, 0, H);
+  gg.addColorStop(0, "#0d1330"); gg.addColorStop(1, "#05071a");
+  ctx.fillStyle = gg; ctx.fillRect(0, GROUND, W, H - GROUND);
   ctx.save();
-  ctx.translate(p.x,p.y);
-  ctx.scale(p.face,1);
-  // 受击闪红
-  if(p.hurtT>0&&Math.floor(p.hurtT*20)%2===0)ctx.globalAlpha=0.4;
-  // 装死姿态
-  if(p.playingDead){
-    ctx.rotate(-Math.PI/2*0.9);
-    ctx.translate(0,10);
-  }
-  // 待机浮动
-  const bob=p.onGround?Math.sin(performance.now()/300)*4:0;
-  ctx.drawImage(img,-p.w/2,-p.h+bob,p.w,p.h);
+  ctx.shadowBlur = 20; ctx.shadowColor = st.ground;
+  ctx.strokeStyle = st.ground; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0, GROUND + 1); ctx.lineTo(W, GROUND + 1); ctx.stroke();
   ctx.restore();
-  // 装死提示
-  if(p.playingDead){
-    ctx.fillStyle="#ff6ec7";ctx.font="bold 13px sans-serif";ctx.textAlign="center";
-    ctx.fillText("💀 装死中（无敌）",p.x,p.y-p.h-10);
+  /* 地面反光格 */
+  ctx.strokeStyle = NAIWA.rgba(st.accent, .1); ctx.lineWidth = 1;
+  for (var lx = 0; lx < W; lx += 44) {
+    ctx.beginPath(); ctx.moveTo(lx, GROUND + 2); ctx.lineTo(lx - 24, H); ctx.stroke();
   }
+  /* 墙 */
+  ctx.fillStyle = NAIWA.rgba(st.ground, .09);
+  ctx.fillRect(0, 0, WALL_L - 24, GROUND);
+  ctx.fillRect(WALL_R + 24, 0, W - WALL_R - 24, GROUND);
 }
-function draw(){
+
+function drawFighter(e) {
+  if (!e) return;
+  var sp = sprites[e.def.id] || sprites.big;
+  var img = e.state === "attack" || e.state === "buff" ? sp.atk : (e.state === "hurt" || e.state === "ko" ? sp.sad : sp.idle);
+  var x = e.x, y = e.y;
+
+  /* 影子 */
   ctx.save();
-  if(shake>0){shake-=0.016;ctx.translate((Math.random()-.5)*14*shake,(Math.random()-.5)*14*shake);}
-  // 背景
-  const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,"#0a0e28");g.addColorStop(1,"#05071a");
-  ctx.fillStyle=g;ctx.fillRect(-20,-20,W+40,H+40);
-  // 决斗场地面霓虹
-  ctx.shadowBlur=16;ctx.shadowColor="#ff5a5a";
-  ctx.strokeStyle="#ff5a5a";ctx.lineWidth=3;
-  ctx.beginPath();ctx.moveTo(0,GROUND+1);ctx.lineTo(W,GROUND+1);ctx.stroke();
-  ctx.shadowBlur=0;
-  // 背景月亮
-  ctx.fillStyle="rgba(255,217,77,.12)";
-  ctx.beginPath();ctx.arc(W/2,130,90,0,7);ctx.fill();
+  var shadowScale = NAIWA.clamp(1 - (GROUND - y) / 900, .35, 1);
+  ctx.globalAlpha = .42 * shadowScale;
+  ctx.fillStyle = "#000";
+  ctx.beginPath();
+  ctx.ellipse(x, GROUND + 3, e.w * .45 * shadowScale, 9 * shadowScale, 0, 0, 7);
+  ctx.fill();
+  ctx.restore();
 
-  if(state==="menu"){drawChar(P1);drawChar(P2);ctx.restore();return;}
+  ctx.save();
+  ctx.translate(x, y);
+  /* 蹲下 / 浮空姿态 */
+  var crouchS = e.crouch && e.onGround ? .78 : 1;
+  ctx.rotate(e.anim.rot);
+  ctx.scale(e.face * e.anim.scale, e.anim.scale * crouchS);
+  ctx.translate(e.anim.lean * 12, 0);
 
-  /* ---- HP 条 ---- */
-  // P1
-  ctx.fillStyle="rgba(5,7,26,.75)";ctx.beginPath();ctx.roundRect(16,16,380,54,12);ctx.fill();
-  ctx.fillStyle="#0d1430";ctx.beginPath();ctx.roundRect(26,28,300,18,9);ctx.fill();
-  const p1hp=P1.hp/P1.maxHp;
-  ctx.fillStyle=p1hp>.3?"#ffd94d":"#ff5a5a";
-  ctx.beginPath();ctx.roundRect(26,28,300*p1hp,18,9);ctx.fill();
-  ctx.fillStyle="#e8ecff";ctx.font="bold 13px sans-serif";ctx.textAlign="left";
-  ctx.fillText("大奶蛙",26,62);
-  // 技能 CD
-  ctx.fillStyle="#0d1430";ctx.beginPath();ctx.roundRect(100,50,60,12,6);ctx.fill();
-  ctx.fillStyle="#22d3ee";ctx.beginPath();ctx.roundRect(100,50,60*(1-P1.cd1/1.2),12,6);ctx.fill();
-  ctx.fillStyle="#0d1430";ctx.beginPath();ctx.roundRect(166,50,60,12,6);ctx.fill();
-  ctx.fillStyle="#5aa8ff";ctx.beginPath();ctx.roundRect(166,50,60*(1-P1.cd2/2.8),12,6);ctx.fill();
-  ctx.fillStyle="#8b93c8";ctx.font="9px sans-serif";ctx.textAlign="center";
-  ctx.fillText("笑",130,59);ctx.fillText("哭",196,59);
+  /* 待机浮动 */
+  var bob = e.onGround ? Math.sin(time / 260 + e.side * 2) * 4 : 0;
 
-  // P2
-  ctx.fillStyle="rgba(5,7,26,.75)";ctx.beginPath();ctx.roundRect(W-396,16,380,54,12);ctx.fill();
-  ctx.fillStyle="#0d1430";ctx.beginPath();ctx.roundRect(W-326,28,300,18,9);ctx.fill();
-  const p2hp=P2.hp/P2.maxHp;
-  ctx.fillStyle=p2hp>.3?"#ff6ec7":"#ff5a5a";
-  ctx.beginPath();ctx.roundRect(W-326+300*(1-p2hp),28,300*p2hp,18,9);ctx.fill();
-  ctx.fillStyle="#e8ecff";ctx.font="bold 13px sans-serif";ctx.textAlign="right";
-  ctx.fillText("小奶蛙",W-26,62);
+  /* 受击闪白 / 无敌闪烁 */
+  if (e.invuln > 0 && e.state !== "ko") ctx.globalAlpha = (Math.floor(time / 60) % 2) ? .45 : .9;
+  if (e.hitFlash > 0) {
+    ctx.save();
+    ctx.globalAlpha = e.hitFlash / 8 * .85;
+    ctx.drawImage(img, -e.w / 2, -e.h + bob, e.w, e.h);
+    ctx.restore();
+  }
 
-  // 回合时间
-  ctx.fillStyle="#ffd94d";ctx.font="bold 22px Consolas,monospace";ctx.textAlign="center";
-  ctx.fillText(Math.ceil(roundT),W/2,42);
+  /* 能量满光环 */
+  if (e.meter >= 100) {
+    ctx.save();
+    ctx.globalAlpha = .28 + .16 * Math.sin(time / 140);
+    ctx.shadowBlur = 30; ctx.shadowColor = "#ffd94d";
+    ctx.strokeStyle = "#ffd94d"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(0, -e.h * .5, e.w * .62, e.h * .62, 0, 0, 7); ctx.stroke();
+    ctx.restore();
+  }
+  /* 霸体护盾 */
+  if (e.armor > 0) {
+    ctx.save();
+    ctx.globalAlpha = .3;
+    ctx.strokeStyle = "#ffb300"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(0, -e.h * .5, e.w * .58, e.h * .6, 0, 0, 7); ctx.stroke();
+    ctx.restore();
+  }
+  /* 减速冰霜 */
+  if (e.slow > 0) {
+    ctx.save(); ctx.globalAlpha = .35; ctx.fillStyle = "#5aa8ff";
+    ctx.beginPath(); ctx.ellipse(0, -e.h * .5, e.w * .5, e.h * .55, 0, 0, 7); ctx.fill();
+    ctx.restore();
+  }
 
-  // 角色
-  drawChar(P1);drawChar(P2);
+  ctx.shadowBlur = 18; ctx.shadowColor = NAIWA.rgba(e.def.glow || e.def.color, .55);
+  /* 攻击姿态：前倾 */
+  var atkOff = 0, atkRot = 0;
+  if (e.state === "attack" && e.move) {
+    var ph = e.phase;
+    atkOff = ph === "startup" ? -6 : ph === "active" ? 16 : 4;
+    atkRot = ph === "active" ? e.face * .12 : 0;
+  }
+  ctx.rotate(atkRot);
+  ctx.drawImage(img, -e.w / 2 + atkOff * .5, -e.h + bob, e.w, e.h);
+  ctx.shadowBlur = 0;
 
-  // 投射物
-  for(const pr of projectiles){
-    if(pr.type==="laugh"){
-      ctx.save();ctx.globalAlpha=Math.max(0,0.8-pr.t*0.5);
-      ctx.strokeStyle="#ffd94d";ctx.lineWidth=4;ctx.shadowBlur=16;ctx.shadowColor="#ffd94d";
-      ctx.beginPath();ctx.arc(pr.x,pr.y,pr.r,0,7);ctx.stroke();
-      ctx.restore();
-    }else if(pr.type==="tear"){
-      ctx.save();ctx.translate(pr.x,pr.y);
-      ctx.fillStyle="#5aa8ff";ctx.shadowBlur=8;ctx.shadowColor="#5aa8ff";
-      ctx.beginPath();ctx.ellipse(0,0,6,10,0,0,7);ctx.fill();
-      ctx.restore();
+  /* 装死 / KO 姿态 */
+  if (e.dead) {
+    ctx.rotate(e.face * 1.3);
+    ctx.translate(0, 12);
+  }
+  ctx.restore();
+
+  /* 防御盾 */
+  if ((e.guard || e.crouch) && e.onGround) {
+    ctx.save();
+    ctx.globalAlpha = .3 + .12 * Math.sin(time / 90);
+    ctx.strokeStyle = "#22d3ee"; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x + e.face * 16, y - e.h * .5, e.w * .48, -1.2, 1.2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  /* 反击架势提示 */
+  if (e.counter) {
+    ctx.save();
+    ctx.globalAlpha = .55 + .3 * Math.sin(time / 70);
+    ctx.strokeStyle = "#22d3ee"; ctx.lineWidth = 2;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.ellipse(x, y - e.h * .5, e.w * .62, e.h * .6, 0, 0, 7); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+  /* 判定框调试 */
+  if (state.showHitbox) {
+    var hb = e.move && e.phase === "active" ? hitboxOf(e) : null;
+    var hu = hurtboxOf(e);
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,90,90,.9)"; ctx.lineWidth = 1.5;
+    ctx.strokeRect(hu.x - hu.hw, hu.y - hu.hh, hu.hw * 2, hu.hh * 2);
+    if (hb) {
+      ctx.strokeStyle = "rgba(255,217,77,.95)";
+      ctx.fillStyle = "rgba(255,217,77,.14)";
+      ctx.fillRect(hb.x - hb.hw, hb.y - hb.hh, hb.hw * 2, hb.hh * 2);
+      ctx.strokeRect(hb.x - hb.hw, hb.y - hb.hh, hb.hw * 2, hb.hh * 2);
     }
+    if (e.aoeT > 0) {
+      ctx.strokeStyle = "rgba(138,107,255,.8)";
+      ctx.beginPath(); ctx.ellipse(e.x + e.face * 30, e.y, e.aoeR, 26, 0, 0, 7); ctx.stroke();
+    }
+    ctx.restore();
   }
-  // 粒子
-  for(const p of parts){
-    ctx.globalAlpha=Math.max(0,1-p.t/p.life);
-    ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();
+  /* 帧数据 */
+  if (state.showFrame && e.move) {
+    ctx.save();
+    ctx.font = "bold 11px Consolas,monospace";
+    ctx.textAlign = "center";
+    ctx.fillStyle = e.phase === "startup" ? "#22d3ee" : e.phase === "active" ? "#ff5a5a" : "#8b93c8";
+    ctx.fillText(e.move.name + " · " + e.phase + " " + e.stateT + "/" + (e.move.startup + e.move.active + e.move.recovery), x, y - e.h - 46);
+    ctx.restore();
   }
-  ctx.globalAlpha=1;
-  // 伤害飘字
-  for(const f of floaters){
-    ctx.globalAlpha=Math.max(0,1-f.t/1.2);
-    ctx.fillStyle=f.color;ctx.font=`bold ${f.size}px sans-serif`;ctx.textAlign="center";
-    ctx.shadowBlur=10;ctx.shadowColor=f.color;
-    ctx.fillText(f.txt,f.x,f.y);
-    ctx.shadowBlur=0;
-  }
-  ctx.globalAlpha=1;
-  ctx.restore();
 }
 
-/* ---------- 开始/重开 ---------- */
-document.getElementById("startBtn").addEventListener("click",start);
-document.getElementById("againBtn").addEventListener("click",start);
-function start(){
-  reset();
-  document.getElementById("menu").classList.add("hidden");
-  document.getElementById("endScreen").classList.add("hidden");
-  document.getElementById("koText").classList.remove("show");
-  state="run";last=performance.now();
+function draw() {
+  ctx.save();
+  /* 屏幕震动 */
+  if (state.shake > 0) {
+    state.shake = Math.max(0, state.shake - .022);
+    var mag = state.shake * 22;
+    ctx.translate((Math.random() - .5) * mag, (Math.random() - .5) * mag);
+  }
+  drawStage();
+
+  /* 残像 */
+  for (var i = 0; i < afterimages.length; i++) {
+    var a = afterimages[i];
+    var alpha = (1 - a.t / a.life) * .38;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = "lighter";
+    var cvx = NAIWA.tintSprite(a.src, a.color, { size: 256 });
+    ctx.drawImage(cvx, a.x - a.w / 2, a.y - a.h, a.w, a.h);
+    ctx.restore();
+  }
+
+  /* 角色（被击中的后画，覆盖在上层） */
+  var order = P[0] && P[1] ? (P[0].hitFlash >= P[1].hitFlash ? [P[1], P[0]] : [P[0], P[1]]) : [P[0], P[1]];
+  order.forEach(function (e) { if (e) drawFighter(e); });
+
+  /* 投射物 */
+  for (var j = 0; j < projectiles.length; j++) {
+    var p = projectiles[j];
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.shadowBlur = 22; ctx.shadowColor = p.color;
+    var grad = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, p.r);
+    grad.addColorStop(0, "#fff");
+    grad.addColorStop(.45, p.color);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+
+  /* 粒子 */
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (var k = 0; k < particles.length; k++) {
+    var q = particles[k];
+    ctx.globalAlpha = Math.max(0, 1 - q.t / q.life);
+    ctx.fillStyle = q.color;
+    ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+
+  /* 冲击环 */
+  for (var r = 0; r < rings.length; r++) {
+    var rg = rings[r], tt = rg.t / rg.dur;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - tt) * .9;
+    ctx.strokeStyle = rg.color; ctx.lineWidth = rg.w * (1 - tt * .6);
+    ctx.beginPath();
+    ctx.arc(rg.x, rg.y, rg.r0 + (rg.r1 - rg.r0) * tt, 0, 7);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* 飘字 */
+  for (var f = 0; f < floaters.length; f++) {
+    var ft = floaters[f];
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - ft.t / 1.1);
+    ctx.font = "900 " + ft.size + "px 'PingFang SC',sans-serif";
+    ctx.textAlign = "center";
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(5,7,26,.9)";
+    ctx.strokeText(ft.txt, ft.x, ft.y);
+    ctx.fillStyle = ft.color;
+    ctx.shadowBlur = 12; ctx.shadowColor = ft.color;
+    ctx.fillText(ft.txt, ft.x, ft.y);
+    ctx.restore();
+  }
+
+  /* KO 剪影压暗 */
+  if (state.phase === "ko" || state.phase === "over") {
+    ctx.fillStyle = "rgba(5,7,26,.28)";
+    ctx.fillRect(0, 0, W, H);
+  }
+  ctx.restore();
+
+  /* 全屏闪白 */
+  if (state.flash > 0) {
+    state.flash = Math.max(0, state.flash - .03);
+    ctx.fillStyle = "rgba(255,255,255," + state.flash + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+  /* 晕影 */
+  var vg = ctx.createRadialGradient(W / 2, H / 2, H * .35, W / 2, H / 2, H * .95);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.5)");
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+}
+
+/* ---------------- HUD 同步 ---------------- */
+function syncHud() {
+  for (var s = 0; s < 2; s++) {
+    var e = P[s];
+    if (!e) continue;
+    var pct = Math.max(0, e.hp / e.maxHp) * 100;
+    hud.hp[s].style.width = pct + "%";
+    hud.hp[s].classList.toggle("low", pct <= 30);
+    if (e.chipHp < e.hp) e.chipHp = e.hp;
+    else e.chipHp += (e.hp - e.chipHp) * .012;
+    hud.chip[s].style.width = Math.max(pct, e.chipHp / e.maxHp * 100) + "%";
+    hud.hpTxt[s].textContent = Math.ceil(e.hp) + " / " + e.maxHp;
+    var mp = Math.round(e.meter);
+    hud.mt[s].querySelector("i").style.width = mp + "%";
+    hud.mt[s].classList.toggle("full", mp >= 100);
+    hud.mtTxt[s].textContent = mp >= 100 ? "SUPER READY! (O)" : "ENERGY " + mp + "%";
+    var wins = state.wins[s];
+    var dots = hud.rounds[s].children;
+    for (var i = 0; i < dots.length; i++) dots[i].classList.toggle("win", i < wins);
+  }
+  hud.timer.textContent = state.mode === "training" ? "∞" : Math.ceil(state.timer);
+  hud.timer.classList.toggle("warn", state.timer <= 10 && state.mode !== "training");
+  /* 连段 */
+  for (var c = 0; c < 2; c++) {
+    if (state.combo[c] >= 2) {
+      comboEl[c].classList.add("show");
+      comboCnt[c].textContent = state.combo[c];
+      comboDmg[c].textContent = Math.round(state.comboDmg[c]) + " DMG";
+    } else comboEl[c].classList.remove("show");
+  }
+}
+
+/* ---------------- 主循环 ---------------- */
+var lastT = performance.now(), acc = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  var dt = now - lastT; lastT = now;
+  if (dt > 200) dt = 200;
+  time = now;
+  var scale = state.slow > 0 ? .34 : 1;
+  acc += dt * scale;
+  var iter = 0;
+  while (acc >= STEP && iter < 5) {
+    if (state.phase === "fight" || state.phase === "announce" || state.phase === "ko") update();
+    else if (state.phase === "menu" || state.phase === "select" || state.phase === "stage") {
+      /* 菜单里也让特效继续跑 */
+      for (var j = particles.length - 1; j >= 0; j--) { particles[j].t += .016; particles[j].x += particles[j].vx * .016; particles[j].y += particles[j].vy * .016; particles[j].vy += 400 * .016; if (particles[j].t >= particles[j].life) particles.splice(j, 1); }
+    }
+    acc -= STEP; iter++;
+    buffer = buffer.filter(function (b) { return now - b.t < 200; });
+  }
+  draw();
+  syncHud();
 }
 requestAnimationFrame(loop);
+
+/* ---------------- 菜单 / 选人 UI ---------------- */
+function hideAll() { ["menu", "select", "stagepick", "result"].forEach(function (id) { $(id).classList.add("hidden"); }); }
+
+/* 模式按钮 */
+NAIWA.$$("#modes .mode").forEach(function (b) {
+  b.addEventListener("click", function () {
+    NAIWA.$$("#modes .mode").forEach(function (x) { x.classList.remove("on"); });
+    b.classList.add("on");
+    state.mode = b.dataset.m;
+    NAIWA.audio.select();
+    $("sd2h").textContent = state.mode === "versus" ? "2P 斗士" : (state.mode === "training" ? "木桩 (不还手)" : "CPU 斗士");
+  });
+});
+$("diffBtn").addEventListener("click", function () {
+  state.diff = (state.diff + 1) % DIFFS.length;
+  this.textContent = DIFFS[state.diff].label;
+  NAIWA.audio.select();
+});
+$("soundBtn").addEventListener("click", function () {
+  var on = NAIWA.audio.toggle();
+  this.textContent = on ? "🔊 音效开" : "🔇 音效关";
+});
+
+/* 构建选人面板 */
+function buildRoster(side) {
+  var host = $("roster" + (side + 1));
+  host.innerHTML = "";
+  F.list.forEach(function (f, i) {
+    var d = document.createElement("div");
+    d.className = "rf"; d.dataset.i = i;
+    var c = document.createElement("canvas");
+    c.width = 128; c.height = 128;
+    c.getContext("2d").drawImage(sprites[f.id].icon, 0, 0, 128, 128);
+    d.appendChild(c);
+    var nm = document.createElement("div");
+    nm.className = "nm"; nm.textContent = f.name;
+    d.appendChild(nm);
+    if (f.boss) { var b = document.createElement("div"); b.className = "bdg"; b.textContent = "BOSS"; d.appendChild(b); }
+    d.addEventListener("click", function () {
+      state.pick[side] = i;
+      NAIWA.audio.select();
+      refreshPick();
+    });
+    d.addEventListener("mouseenter", function () { showDetail(side, i); });
+    host.appendChild(d);
+  });
+}
+function refreshPick() {
+  for (var s = 0; s < 2; s++) {
+    var host = $("roster" + (s + 1));
+    NAIWA.$$(".rf", host).forEach(function (el) {
+      el.classList.remove("sel1", "sel2");
+      if (+el.dataset.i === state.pick[s]) el.classList.add(s === 0 ? "sel1" : "sel2");
+    });
+    showDetail(s, state.pick[s]);
+    $("sd" + (s + 1) + "c").textContent = F.byIndex(state.pick[s]).name;
+  }
+}
+function showDetail(side, i) {
+  var f = F.byIndex(i);
+  var host = $("d" + (side + 1));
+  var bar = function (label, v, max) {
+    return '<span>' + label + '</span><span class="b"><i style="width:' + Math.min(100, v / max * 100) + '%"></i></span>';
+  };
+  host.innerHTML =
+    '<h4>' + f.emoji + " " + f.name + ' <span class="ttl">' + f.title + '</span></h4>' +
+    '<div class="lore">' + f.lore + '</div>' +
+    '<div class="bars">' +
+    bar("生命 " + f.hp, f.hp, 150) +
+    bar("速度 " + f.speed.toFixed(1), f.speed, 7) +
+    bar("跳跃 " + f.jump.toFixed(1), f.jump, 17) +
+    bar("体重 " + f.weight.toFixed(2), f.weight, 1.5) +
+    '</div>' +
+    '<div class="mv">' +
+    '<b>技①</b> ' + f.moves.s1.name + ' — ' + f.moves.s1.desc + '<br>' +
+    '<b>技②</b> ' + f.moves.s2.name + ' — ' + f.moves.s2.desc + '<br>' +
+    '<b>超杀</b> ' + f.moves.s3.name + (f.moves.s3.meterCost ? '（' + f.moves.s3.meterCost + ' 能量）' : '') + ' — ' + f.moves.s3.desc +
+    '</div>';
+}
+function buildStageGrid() {
+  var host = $("stageGrid"); host.innerHTML = "";
+  F.stages.forEach(function (s, i) {
+    var d = document.createElement("div");
+    d.className = "stg" + (i === state.stage ? " on" : "");
+    d.innerHTML = "<b>" + s.emoji + " " + s.name + "</b><span>" + s.desc + "</span>";
+    d.addEventListener("click", function () {
+      state.stage = i; stageCfg = s;
+      NAIWA.$$("#stageGrid .stg").forEach(function (x) { x.classList.remove("on"); });
+      d.classList.add("on");
+      NAIWA.audio.select();
+    });
+    host.appendChild(d);
+  });
+}
+
+$("startBtn").addEventListener("click", function () {
+  hideAll(); $("select").classList.remove("hidden");
+  state.phase = "select";
+  refreshPick();
+});
+$("randBtn").addEventListener("click", function () {
+  state.pick = [NAIWA.randInt(0, F.list.length - 1), NAIWA.randInt(0, F.list.length - 1)];
+  refreshPick(); NAIWA.audio.select();
+});
+$("toStageBtn").addEventListener("click", function () {
+  hideAll(); $("stagepick").classList.remove("hidden");
+  state.phase = "stage"; buildStageGrid();
+});
+$("backSelBtn").addEventListener("click", function () {
+  hideAll(); $("select").classList.remove("hidden"); state.phase = "select";
+});
+$("fightBtn").addEventListener("click", function () {
+  hideAll();
+  state.ladder = 0;
+  startMatch();
+});
+$("againBtn").addEventListener("click", function () {
+  hideAll(); state.ladder = 0; startMatch();
+});
+$("changeBtn").addEventListener("click", function () {
+  hideAll(); $("select").classList.remove("hidden"); state.phase = "select"; hud.root.style.display = "none";
+});
+$("menuBtn").addEventListener("click", function () {
+  hideAll(); $("menu").classList.remove("hidden"); state.phase = "menu"; hud.root.style.display = "none";
+});
+$("pauseBtn").addEventListener("click", function () {
+  if (state.phase === "fight") { state.phase = "paused"; this.textContent = "▶️ 继续"; NAIWA.toast("已暂停", "#22d3ee"); }
+  else if (state.phase === "paused") { state.phase = "fight"; lastT = performance.now(); acc = 0; this.textContent = "⏸️ 暂停"; }
+});
+$("hitboxBtn").addEventListener("click", function () {
+  state.showHitbox = !state.showHitbox;
+  this.style.color = state.showHitbox ? "#ffd94d" : "";
+});
+$("frameBtn").addEventListener("click", function () {
+  state.showFrame = !state.showFrame;
+  this.style.color = state.showFrame ? "#ffd94d" : "";
+});
+
+/* ---------------- 启动 ---------------- */
+NAIWA.preloadFrogs().then(function () {
+  buildSprites();
+  buildRoster(0); buildRoster(1);
+  P[0] = makeEnt(F.byIndex(state.pick[0]).id, 0, F.byIndex(state.pick[0]));
+  P[1] = makeEnt(F.byIndex(state.pick[1]).id, 1, F.byIndex(state.pick[1]));
+  P[0].x = W * .32; P[1].x = W * .68;
+  refreshPick();
+  refreshRec();
+  buildStageGrid();
+});
+NAIWA.toast("🐸 奶蛙决斗场 v2 已加载 · 选好斗士开打！", "#ffd94d");
+
 })();
 </script>
 </body>

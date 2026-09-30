@@ -63,6 +63,10 @@
   <div class="sub">为庆祝奶蛙诞生而举办 · 超越彩虹奶蛙军团，捧起奶蛙杯 🏆</div>
 </header>
 
+<nav data-naiwa-nav style="position:sticky;top:0;z-index:60;width:100%;background:rgba(5,7,26,.92);border-bottom:1px solid var(--line);margin-top:12px">
+  <div class="inner" style="max-width:1000px;margin:0 auto;display:flex;gap:6px;padding:8px 14px;overflow-x:auto;scrollbar-width:none"></div>
+</nav>
+
 <div class="stage">
   <canvas id="game" width="480" height="700"></canvas>
 
@@ -450,5 +454,6 @@ function start(){
 requestAnimationFrame(loop);
 })();
 </script>
+<script src="naiwa-common.js"></script>
 </body>
 </html>

@@ -1,0 +1,65 @@
+name: 🐸 部署奶蛙观测站到 GitHub Pages
+
+# 推送到 main 时自动发布；也可以在 Actions 页面手动触发
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 允许 Actions 写入 Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同时只跑一个部署，新的等旧的完成（不取消进行中的发布）
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: 打包静态站点
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+
+      - name: 组装发布目录
+        run: |
+          set -e
+          mkdir -p _site
+          # 只发布站点需要的文件（.git / tools / _site 自身不发布）
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='_site' \
+            --exclude='tools' \
+            --exclude='node_modules' \
+            --exclude='__pycache__' \
+            --exclude='.acl-recovery' \
+            ./ _site/
+          # Pages 默认走 Jekyll，静态站点直接关掉，避免下划线开头的文件被忽略
+          touch _site/.nojekyll
+          echo "---- 发布文件清单 ----"
+          find _site -type f | sort | head -60
+
+      - name: 上传发布产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: 发布
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧪 奶蛙数据实验室 · 图片采集与换色引擎</title>
+<link rel="icon" href="naiwa.webp">
+<meta name="description" content="奶蛙数据实验室：网络图片采集数据模块可视化、换色精灵生成器、格斗角色数据面板。">
+<style>
+  :root{
+    --bg:#05071a; --panel:rgba(16,22,48,.72); --ink:#e8ecff; --muted:#8b93c8;
+    --frog1:#ffd94d; --cyan:#22d3ee; --accent:#ff6ec7; --green:#7ec850; --line:#2a3a6a; --red:#ff5a5a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:radial-gradient(1100px 620px at 50% -12%, rgba(126,200,80,.12), transparent 62%), var(--bg);
+    color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;min-height:100vh}
+  canvas#netbg{position:fixed;inset:0;z-index:0;opacity:.32;pointer-events:none}
+  header{position:relative;z-index:2;text-align:center;padding:28px 16px 8px}
+  h1{font-size:clamp(23px,4vw,38px);letter-spacing:3px;
+    background:linear-gradient(90deg,#7ec850,#22d3ee,#ffd94d);background-size:250% 100%;
+    -webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 6s linear infinite}
+  @keyframes flow{0%{background-position:0 0}100%{background-position:250% 0}}
+  .sub{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.8}
+  nav{position:sticky;top:0;z-index:50;background:rgba(5,7,26,.92);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);margin-top:16px}
+  nav .inner{max-width:1280px;margin:0 auto;display:flex;gap:6px;padding:8px 16px;overflow-x:auto;scrollbar-width:none}
+  nav a{text-decoration:none;color:var(--ink);font-size:12.5px;padding:6px 14px;border-radius:20px;white-space:nowrap;
+    transition:all .25s;border:1px solid transparent}
+  nav a:hover{color:var(--cyan);border-color:rgba(34,211,238,.5);box-shadow:0 0 14px rgba(34,211,238,.25)}
+  .wrap{position:relative;z-index:2;max-width:1280px;margin:0 auto;padding:20px 18px 80px}
+
+  .card{background:var(--panel);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:18px;
+    padding:18px 20px;margin-bottom:16px;position:relative;overflow:hidden}
+  .card::after{content:"";position:absolute;top:0;left:0;width:34%;height:1px;background:linear-gradient(90deg,var(--green),transparent)}
+  .card h2{font-size:16.5px;margin-bottom:5px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .card h2 .tag{font-size:10.5px;font-weight:400;color:var(--cyan);border:1px solid rgba(34,211,238,.35);border-radius:20px;padding:2px 10px}
+  .card .hint{font-size:12px;color:var(--muted);line-height:1.85;margin-bottom:14px}
+  .card .hint code{background:rgba(5,7,26,.8);border:1px solid var(--line);border-radius:6px;padding:1px 7px;
+    font-family:Consolas,monospace;font-size:11.5px;color:var(--frog1)}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .kpi{background:rgba(5,7,26,.6);border:1px solid var(--line);border-radius:14px;padding:14px 16px;position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,var(--green),transparent);animation:scan 3s linear infinite}
+  @keyframes scan{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+  .kpi .n{font-size:27px;font-weight:900;color:var(--frog1);font-variant-numeric:tabular-nums;
+    text-shadow:0 0 16px rgba(255,217,77,.45);font-family:Consolas,monospace}
+  .kpi .l{font-size:11.5px;color:var(--muted);margin-top:3px}
+
+  .empty{border:1px dashed var(--line);border-radius:14px;padding:26px;text-align:center;color:var(--muted);font-size:13px;line-height:1.9}
+  .empty b{font-size:36px;display:block;margin-bottom:10px}
+  .empty code{background:rgba(5,7,26,.9);border:1px solid var(--line);border-radius:8px;padding:8px 14px;
+    display:inline-block;margin-top:10px;font-family:Consolas,monospace;color:var(--green);font-size:12.5px}
+
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;max-height:420px;overflow-y:auto;padding:2px}
+  .tile{position:relative;aspect-ratio:1;border-radius:12px;border:1px solid var(--line);overflow:hidden;
+    background:rgba(5,7,26,.7);transition:all .24s;cursor:pointer}
+  .tile img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+  .tile:hover{border-color:var(--cyan);transform:translateY(-3px);box-shadow:0 0 20px rgba(34,211,238,.3)}
+  .tile:hover img{transform:scale(1.1)}
+  .tile .lic{position:absolute;bottom:0;left:0;right:0;font-size:9px;padding:4px 6px;
+    background:linear-gradient(transparent,rgba(5,7,26,.94));color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile .lic b{color:var(--green)}
+  .tile .px{position:absolute;top:4px;right:5px;font-size:9px;background:rgba(5,7,26,.85);border-radius:6px;padding:1px 5px;color:var(--muted)}
+
+  .lab-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px}
+  .fg{border:1px solid var(--line);border-radius:14px;padding:10px;background:rgba(5,7,26,.55);text-align:center;
+    transition:all .25s;position:relative;overflow:hidden}
+  .fg:hover{transform:translateY(-4px);box-shadow:0 0 22px rgba(34,211,238,.22);border-color:var(--cyan)}
+  .fg canvas{width:100%;aspect-ratio:1;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5))}
+  .fg .nm{font-size:12.5px;font-weight:800;margin-top:6px}
+  .fg .ttl{font-size:10px;color:var(--muted)}
+  .fg .hue{font-size:9.5px;color:var(--cyan);font-family:Consolas,monospace;margin-top:3px}
+
+  .ctl{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;font-size:12.5px;color:var(--muted)}
+  .ctl input[type=range]{width:170px;accent-color:#ffd94d}
+  .ctl select,.ctl input[type=color]{background:rgba(5,7,26,.85);border:1px solid var(--line);border-radius:9px;
+    padding:7px 11px;color:var(--ink);font-family:inherit;font-size:12.5px;outline:none}
+  .ctl input[type=color]{padding:2px;width:46px;height:32px}
+  .ctl .v{color:var(--frog1);font-family:Consolas,monospace;font-weight:800;min-width:42px;display:inline-block}
+
+  .hero-preview{display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:center}
+  @media(max-width:760px){.hero-preview{grid-template-columns:1fr}}
+  .hero-preview .big{background:radial-gradient(circle at 50% 60%, rgba(255,217,77,.12), transparent 72%);
+    border:1px solid var(--line);border-radius:16px;display:flex;align-items:center;justify-content:center;padding:14px}
+  .hero-preview .big canvas{width:100%;max-width:250px;aspect-ratio:1}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12.5px}
+  .kv .k{color:var(--muted)} .kv .v{color:var(--ink)}
+  .kv .v b{color:var(--frog1)}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid rgba(42,58,106,.5)}
+  th{color:var(--muted);font-weight:600;font-size:11.5px;position:sticky;top:0;background:rgba(13,20,48,.95)}
+  tbody tr:hover{background:rgba(34,211,238,.06)}
+  td b{color:var(--frog1)}
+  .tblwrap{max-height:400px;overflow-y:auto;border:1px solid var(--line);border-radius:12px}
+
+  .console{background:rgba(2,4,14,.9);border:1px solid var(--line);border-radius:12px;padding:14px;
+    font-family:Consolas,monospace;font-size:12.5px;line-height:1.9;color:var(--green);min-height:110px;
+    max-height:230px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+  .console .err{color:var(--red)} .console .dim{color:var(--muted)} .console .hl{color:var(--frog1)}
+  .apibox{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .apibox button{background:rgba(16,22,48,.8);border:1px solid var(--line);color:var(--ink);border-radius:9px;
+    padding:8px 14px;font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s}
+  .apibox button:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 14px rgba(34,211,238,.25)}
+
+  .btn{border:none;cursor:pointer;font-size:13.5px;font-weight:800;padding:11px 26px;border-radius:24px;color:#05071a;
+    background:linear-gradient(135deg,#22d3ee,#ffd94d);box-shadow:0 0 20px rgba(34,211,238,.4);font-family:inherit;transition:all .22s}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(34,211,238,.6)}
+  .btn.ghost{background:rgba(16,22,48,.7);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .btn.ghost:hover{border-color:var(--cyan);color:var(--cyan);transform:none}
+
+  footer{color:var(--muted);font-size:11.5px;padding:18px 12px 50px;text-align:center;line-height:1.9;position:relative;z-index:2}
+</style>
+</head>
+<body>
+<canvas id="netbg"></canvas>
+
+<header>
+  <h1>🧪 奶蛙数据实验室</h1>
+  <div class="sub">网络图片采集数据模块 · 换色精灵引擎 · 12 位斗士数值面板<br>
+    数据来自 <code style="font-family:Consolas,monospace;color:#7ec850">tools/naiwa_crawler.py</code> 生成的 <code style="font-family:Consolas,monospace;color:#7ec850">assets/naiwa-images/</code></div>
+</header>
+
+<nav data-naiwa-nav><div class="inner"></div></nav>
+
+<div class="wrap">
+
+  <!-- ============ 采集数据总览 ============ -->
+  <div class="card">
+    <h2>📦 图片数据模块 <span class="tag">assets/naiwa-images/manifest.json</span></h2>
+    <div class="hint">
+      这是 Python 采集器产出的真实数据。运行 <code>python tools/naiwa_crawler.py --limit 120</code>
+      之后刷新本页，这里会显示采集到的图片与授权信息。
+    </div>
+    <div id="kpis" class="kpis"></div>
+    <div id="galleryHost" style="margin-top:16px"></div>
+  </div>
+
+  <!-- ============ 换色引擎 ============ -->
+  <div class="card">
+    <h2>🎨 换色精灵引擎 <span class="tag">NAIWA.tintSprite()</span></h2>
+    <div class="hint">
+      12 位奶蛙斗士的形象全部由原图程序化换色生成，不依赖任何外部素材。
+      拖动滑块实时预览：色相偏移 / 叠加色 / 叠加强度 / 描边光晕。
+    </div>
+    <div class="ctl">
+      <label>底图
+        <select id="srcSel">
+          <option value="naiwa-standing.webp">standing（站立）</option>
+          <option value="naiwa-smiling.webp">smiling（大笑）</option>
+          <option value="naiwa-thinking.webp">thinking（思考）</option>
+          <option value="naiwa.webp">naiwa（主图）</option>
+        </select>
+      </label>
+      <label>叠加色 <input type="color" id="tintColor" value="#ffd94d"></label>
+      <label>色相 <input type="range" id="hue" min="-180" max="180" value="0"><span class="v" id="hueV">0°</span></label>
+      <label>强度 <input type="range" id="alpha" min="0" max="100" value="72"><span class="v" id="alphaV">.72</span></label>
+      <button class="btn ghost" id="applyEngine">应用到全部斗士</button>
+    </div>
+    <div class="hero-preview" style="margin-bottom:16px">
+      <div class="big"><canvas id="previewBig" width="256" height="256"></canvas></div>
+      <div class="kv" id="previewKv"></div>
+    </div>
+    <div class="lab-grid" id="labGrid"></div>
+  </div>
+
+  <!-- ============ 斗士数值表 ============ -->
+  <div class="card">
+    <h2>📊 斗士数值面板 <span class="tag">assets/fighters.js</span></h2>
+    <div class="hint">点击表头可排序。战斗等级 = 生命×0.4 + 速度×6 + 跳跃×2（粗略强度参考）。</div>
+    <div class="tblwrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-k="name">斗士</th><th data-k="hp">生命</th><th data-k="speed">速度</th>
+            <th data-k="jump">跳跃</th><th data-k="weight">体重</th>
+            <th data-k="airJumps">空中跳</th><th data-k="s1">技①</th><th data-k="s3">超必杀</th><th data-k="tier">等级</th>
+          </tr>
+        </thead>
+        <tbody id="fighterTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ API 控制台 ============ -->
+  <div class="card">
+    <h2>💻 数据 API 控制台</h2>
+    <div class="hint">在浏览器里直接查询模块数据。可用对象：<code>NAIWA</code>、<code>NAIWA.FIGHTERS</code>、<code>NAIWA_IMAGES</code></div>
+    <div class="apibox">
+      <button data-code="NAIWA.FIGHTERS.list.length + ' 位斗士：' + NAIWA.FIGHTERS.list.map(f=>f.name).join(' / ')">列出全部斗士</button>
+      <button data-code="JSON.stringify(NAIWA_IMAGES ? NAIWA_IMAGES.derived.fighterVariants : '（还没有采集数据）', null, 1)">查看衍生角色数据</button>
+      <button data-code="NAIWA.FIGHTERS.list.map(f=>f.name+' 生命'+f.hp+' 速度'+f.speed).join('\n')">数值清单</button>
+      <button data-code="NAIWA_IMAGES ? NAIWA_IMAGES.derived.count + ' 张已采集图片，' + (NAIWA_IMAGES.derived.totalBytes/1048576).toFixed(2) + ' MB' : '还没有采集数据，先跑 python tools/naiwa_crawler.py'">采集数据概况</button>
+      <button data-code="localStorage.getItem('naiwa:battle') || '（还没打过决斗场）'">我的决斗战绩</button>
+    </div>
+    <div class="console" id="console"><span class="dim">// 点击上面的按钮，或在下方输入框写 JS…</span></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <input id="cmd" placeholder="输入任意 JS 表达式，回车执行" style="flex:1;background:rgba(5,7,26,.85);
+        border:1px solid var(--line);border-radius:10px;padding:11px 14px;color:var(--ink);font-family:Consolas,monospace;
+        font-size:12.5px;outline:none">
+      <button class="btn" id="runCmd">运行</button>
+    </div>
+  </div>
+
+  <!-- ============ 爬虫说明 ============ -->
+  <div class="card">
+    <h2>🕷️ 采集器使用说明 <span class="tag">tools/naiwa_crawler.py</span></h2>
+    <div class="hint">
+      采集器遵循 robots.txt、记录每张图的来源与授权、按 SHA1 去重，并且内置限速。
+      请只采集你有权使用的内容。
+    </div>
+    <div class="console" style="color:#b8c0e8">
+<span class="hl"># 1. 看看内置了哪些来源</span>
+python tools/naiwa_crawler.py --list-sources
+
+<span class="hl"># 2. 干跑：只探测候选链接，不下载</span>
+python tools/naiwa_crawler.py --dry-run
+
+<span class="hl"># 3. 正式采集（最多 120 张，只保留自由授权）</span>
+python tools/naiwa_crawler.py --limit 120 --license-only
+
+<span class="hl"># 4. 用自己的源文件（每行一个 URL）</span>
+python tools/naiwa_crawler.py --sources my-sources.txt --limit 60
+
+<span class="hl"># 5. 分析采集结果</span>
+python tools/naiwa_data.py stats
+python tools/naiwa_data.py list --limit 30
+
+<span class="hl"># 6. 产出会写到：</span>
+assets/naiwa-images/manifest.json    <span class="dim"># 完整清单（含来源 URL 与授权）</span>
+assets/naiwa-images/derived.json     <span class="dim"># 衍生数据（角色换色映射）</span>
+assets/naiwa-images/naiwa-data.js    <span class="dim"># 前端可直接引用的数据模块</span>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  🐸 奶蛙数据实验室 · 采集器与数据模块均为本项目自研，零第三方运行时依赖<br>
+  图片版权归原作者所有，请在使用前检查 manifest.json 里的 license 与 url 字段
+</footer>
+
+<script src="naiwa-common.js"></script>
+<script src="assets/fighters.js"></script>
+<script src="assets/naiwa-images/naiwa-data.js" onerror="window.__noImages=1"></script>
+<script>
+/* ============================================================
+   🧪 奶蛙数据实验室
+   ============================================================ */
+(function () {
+"use strict";
+var $ = function (id) { return document.getElementById(id); };
+var F = NAIWA.FIGHTERS;
+
+/* ---------------- 采集数据 ---------------- */
+var DATA = window.NAIWA_IMAGES || null;
+var derived = DATA && DATA.derived ? DATA.derived : null;
+
+function renderKpis() {
+  var host = $("kpis");
+  if (!derived || !derived.count) {
+    host.innerHTML = '<div class="empty" style="grid-column:1/-1"><b>📭</b>' +
+      "还没有采集到图片数据。<br>在项目根目录运行下面这条命令，然后刷新本页：" +
+      "<code>python tools/naiwa_crawler.py --limit 120 --license-only</code></div>";
+    $("galleryHost").innerHTML = "";
+    return;
+  }
+  var lic = {};
+  derived.tiles.forEach(function (t) { lic[t.license || "unknown"] = (lic[t.license || "unknown"] || 0) + 1; });
+  var kpi = function (n, l) { return '<div class="kpi"><div class="n">' + n + '</div><div class="l">' + l + "</div></div>"; };
+  host.innerHTML =
+    kpi(derived.count, "已采集图片") +
+    kpi((derived.totalBytes / 1048576).toFixed(2) + " MB", "总体积") +
+    kpi(Object.keys(lic).length, "授权类型数") +
+    kpi(derived.fighterVariants ? derived.fighterVariants.length : 0, "可映射斗士") +
+    kpi(new Date(derived.generatedAt).toLocaleDateString("zh-CN"), "采集日期");
+
+  var base = "assets/naiwa-images/";
+  $("galleryHost").innerHTML =
+    '<div style="font-size:12.5px;color:var(--muted);margin-bottom:9px">🖼️ 图片墙（点开原图）· 授权分布：' +
+    Object.keys(lic).map(function (k) { return k + " ×" + lic[k]; }).join(" / ") + "</div>" +
+    '<div class="gallery">' + derived.tiles.slice(0, 200).map(function (t) {
+      return '<div class="tile" data-url="' + (t.url || "") + '">' +
+        '<img src="' + base + t.file + '" alt="' + t.file + '" loading="lazy">' +
+        (t.w ? '<span class="px">' + t.w + "×" + t.h + "</span>" : "") +
+        '<span class="lic">' + (t.source || "未知来源").slice(0, 18) + ' · <b>' + (t.license || "?") + "</b></span>" +
+        "</div>";
+    }).join("") + "</div>";
+  NAIWA.$$("#galleryHost .tile").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var u = el.dataset.url;
+      if (u) window.open(u, "_blank", "noopener");
+      else NAIWA.toast("这条记录没有保存来源 URL", "#8b93c8");
+    });
+  });
+}
+
+/* ---------------- 换色引擎 ---------------- */
+var engine = { src: "naiwa-standing.webp", color: "#ffd94d", hue: 0, alpha: .72 };
+function refreshEngine() {
+  var cv = NAIWA.tintSprite(engine.src, engine.color, { hue: engine.hue, alpha: engine.alpha, size: 256, stroke: NAIWA.rgba(engine.color, .8) });
+  var big = $("previewBig").getContext("2d");
+  big.clearRect(0, 0, 256, 256);
+  big.drawImage(cv, 0, 0, 256, 256);
+  $("previewKv").innerHTML =
+    '<span class="k">底图文件</span><span class="v">' + engine.src + "</span>" +
+    '<span class="k">叠加色</span><span class="v"><b>' + engine.color + "</b></span>" +
+    '<span class="k">色相偏移</span><span class="v">' + engine.hue + "°</span>" +
+    '<span class="k">叠加强度</span><span class="v">' + engine.alpha.toFixed(2) + "</span>" +
+    '<span class="k">生成方式</span><span class="v">canvas 2D · source-atop + overlay</span>' +
+    '<span class="k">缓存键</span><span class="v" style="font-family:Consolas,monospace;font-size:11.5px">' +
+      engine.src + "|" + engine.color + "|" + engine.hue + "|" + engine.alpha.toFixed(2) + "</span>";
+  renderLabGrid();
+}
+function renderLabGrid() {
+  var host = $("labGrid");
+  host.innerHTML = F.list.map(function (f) {
+    return '<div class="fg" data-id="' + f.id + '">' +
+      '<canvas width="150" height="150" data-src="' + f.src + '" data-c="' + f.color + '" data-h="' + (f.hue || 0) + '"></canvas>' +
+      '<div class="nm">' + f.emoji + " " + f.name + "</div>" +
+      '<div class="ttl">' + f.title + "</div>" +
+      '<div class="hue">' + f.color + " · hue " + (f.hue || 0) + "°</div>" +
+      "</div>";
+  }).join("");
+  NAIWA.$$("#labGrid canvas").forEach(function (c) {
+    var sp = NAIWA.tintSprite(c.dataset.src, c.dataset.c, { hue: +c.dataset.h, alpha: engine.alpha, size: 150 });
+    c.getContext("2d").drawImage(sp, 0, 0, 150, 150);
+  });
+}
+$("srcSel").addEventListener("change", function () { engine.src = this.value; refreshEngine(); });
+$("tintColor").addEventListener("input", function () { engine.color = this.value; refreshEngine(); });
+$("hue").addEventListener("input", function () {
+  engine.hue = +this.value; $("hueV").textContent = this.value + "°"; refreshEngine();
+});
+$("alpha").addEventListener("input", function () {
+  engine.alpha = +this.value / 100; $("alphaV").textContent = engine.alpha.toFixed(2); refreshEngine();
+});
+$("applyEngine").addEventListener("click", function () {
+  renderLabGrid();
+  NAIWA.toast("已用当前参数重新生成全部 12 位斗士", "#ffd94d");
+});
+
+/* ---------------- 数值表 ---------------- */
+var sortKey = "tier", sortDir = -1;
+function renderTable() {
+  var rows = F.list.map(function (f) {
+    return {
+      name: f.name, emoji: f.emoji, hp: f.hp, speed: f.speed, jump: f.jump, weight: f.weight,
+      airJumps: f.airJumps || 0, s1: f.moves.s1.name, s3: f.moves.s3.name, tier: F.tier(f), boss: !!f.boss
+    };
+  });
+  rows.sort(function (a, b) {
+    var x = a[sortKey], y = b[sortKey];
+    if (typeof x === "string") return x.localeCompare(y) * sortDir;
+    return (x - y) * sortDir;
+  });
+  $("fighterTbody").innerHTML = rows.map(function (r) {
+    return "<tr><td>" + r.emoji + " <b>" + r.name + "</b>" + (r.boss ? ' <span style="color:#ff5a5a;font-size:10px">BOSS</span>' : "") + "</td>" +
+      "<td>" + r.hp + "</td><td>" + r.speed.toFixed(1) + "</td><td>" + r.jump.toFixed(1) + "</td>" +
+      "<td>" + r.weight.toFixed(2) + "</td><td>" + r.airJumps + "</td>" +
+      "<td>" + r.s1 + "</td><td>" + r.s3 + "</td><td><b>" + r.tier + "</b></td></tr>";
+  }).join("");
+}
+NAIWA.$$("th[data-k]").forEach(function (th) {
+  th.style.cursor = "pointer";
+  th.addEventListener("click", function () {
+    var k = th.dataset.k;
+    if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = -1; }
+    renderTable(); NAIWA.audio.select();
+  });
+});
+
+/* ---------------- 控制台 ---------------- */
+var cons = $("console");
+function print(html) { cons.innerHTML += (cons.innerHTML ? "\n" : "") + html; cons.scrollTop = cons.scrollHeight; }
+function run(code) {
+  print('<span class="dim">› ' + code.replace(/</g, "&lt;") + "</span>");
+  try {
+    var v = (0, eval)(code);   // 实验室控制台，仅供本机自用
+    var out = typeof v === "object" && v !== null ? JSON.stringify(v, null, 1) : String(v);
+    print('<span>' + out.replace(/</g, "&lt;") + "</span>");
+  } catch (e) {
+    print('<span class="err">✖ ' + String(e.message || e).replace(/</g, "&lt;") + "</span>");
+  }
+}
+NAIWA.$$(".apibox button").forEach(function (b) {
+  b.addEventListener("click", function () { run(b.dataset.code); });
+});
+function runCmd() { var c = $("cmd").value.trim(); if (c) { run(c); $("cmd").value = ""; } }
+$("runCmd").addEventListener("click", runCmd);
+$("cmd").addEventListener("keydown", function (e) { if (e.key === "Enter") runCmd(); });
+
+/* ---------------- 启动 ---------------- */
+NAIWA.preloadFrogs().catch(function () { }).then(function () {
+  renderKpis();
+  refreshEngine();
+  renderTable();
+  NAIWA.toast("🧪 数据实验室就绪 · 试试换色引擎", "#7ec850");
+});
+
+})();
+</script>
+</body>
+</html>

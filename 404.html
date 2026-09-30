@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐸 404 · 这里没有奶蛙</title>
+<link rel="icon" href="naiwa.webp">
+<style>
+  :root{--bg:#05071a;--ink:#e8ecff;--muted:#8b93c8;--line:#2a3a6a;--frog1:#ffd94d;--cyan:#22d3ee;--accent:#ff6ec7}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:radial-gradient(1000px 620px at 50% -10%, rgba(34,211,238,.14), transparent 62%), var(--bg);
+    color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 20px;overflow-x:hidden}
+  canvas#netbg{position:fixed;inset:0;z-index:0;opacity:.4;pointer-events:none}
+  .wrap{position:relative;z-index:2;max-width:620px}
+  img.frog{width:150px;height:150px;object-fit:contain;border-radius:50%;
+    border:3px solid var(--frog1);box-shadow:0 0 0 8px rgba(255,217,77,.1),0 0 50px rgba(255,217,77,.5);
+    animation:think 3s ease-in-out infinite}
+  @keyframes think{0%,100%{transform:rotate(-4deg) translateY(0)}50%{transform:rotate(4deg) translateY(-10px)}}
+  h1{font-size:clamp(52px,14vw,110px);font-weight:900;letter-spacing:6px;line-height:1;margin:18px 0 6px;
+    background:linear-gradient(90deg,#22d3ee,#ffd94d 40%,#ff6ec7);background-size:250% 100%;
+    -webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite}
+  @keyframes flow{0%{background-position:0 0}100%{background-position:250% 0}}
+  .t{font-size:16px;font-weight:700;margin-bottom:9px}
+  .p{color:var(--muted);font-size:13px;line-height:1.9;margin-bottom:24px}
+  .links{display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+  .links a{text-decoration:none;color:var(--ink);font-size:13px;padding:11px 22px;border-radius:24px;
+    border:1px solid var(--line);background:rgba(16,22,48,.7);transition:all .22s}
+  .links a:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 18px rgba(34,211,238,.3);transform:translateY(-2px)}
+  .links a.hot{background:linear-gradient(135deg,#ffd94d,#f5a800);color:#05071a;border-color:transparent;font-weight:800}
+  .links a.hot:hover{color:#05071a;box-shadow:0 0 24px rgba(255,217,77,.6)}
+  .code{margin-top:26px;font-family:Consolas,monospace;font-size:12px;color:var(--muted);
+    background:rgba(5,7,26,.8);border:1px solid var(--line);border-radius:10px;padding:10px 16px;display:inline-block;max-width:100%;word-break:break-all}
+</style>
+</head>
+<body>
+<canvas id="netbg"></canvas>
+<div class="wrap">
+  <img class="frog" src="naiwa-thinking.webp" alt="奶蛙">
+  <h1>404</h1>
+  <div class="t">🐸 这里没有奶蛙，它去别的地方思考了</div>
+  <div class="p">你要找的页面不存在，或者已经被奶蛙用「装死」战术藏起来了。<br>从下面挑一个地方继续逛吧。</div>
+  <div class="links">
+    <a class="hot" href="index.html">📊 观测站</a>
+    <a href="battle.html">⚔️ 决斗场</a>
+    <a href="race.html">🏎️ 极速杯</a>
+    <a href="shop.html">🛒 奶蛙购</a>
+    <a href="lab.html">🧪 数据实验室</a>
+  </div>
+  <div class="code" id="path"></div>
+</div>
+<script src="naiwa-common.js"></script>
+<script>
+  document.getElementById("path").textContent = "请求路径：" + location.pathname + location.search;
+</script>
+</body>
+</html>

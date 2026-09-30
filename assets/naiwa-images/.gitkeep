@@ -1,0 +1,9 @@
+# 这个目录用来存放 Python 采集器（tools/naiwa_crawler.py）下载的图片。
+# 采集后会产生：
+#   manifest.json    完整清单（含每张图的来源 URL 与授权信息）
+#   derived.json     衍生数据（12 位斗士的换色映射）
+#   naiwa-data.js    前端可直接 <script> 引用的数据模块
+#   *.png / *.jpg    图片本体（默认被 .gitignore 忽略）
+#
+# 生成命令：
+#   python tools/naiwa_crawler.py --limit 120 --license-only

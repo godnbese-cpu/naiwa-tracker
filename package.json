@@ -1,0 +1,26 @@
+{
+  "name": "naiwa-tracker",
+  "version": "2.0.0",
+  "private": true,
+  "description": "🐸 奶蛙宇宙：观测站 + 决斗场格斗游戏 + 极速杯 + 淘宝式奶蛙购 + 数据实验室（纯静态，零依赖）",
+  "homepage": "https://godnbese-cpu.github.io/naiwa-tracker/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/godnbese-cpu/naiwa-tracker.git"
+  },
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "serve": "python -m http.server 8000",
+    "crawl": "python tools/naiwa_crawler.py --limit 120 --license-only",
+    "crawl:dry": "python tools/naiwa_crawler.py --dry-run",
+    "crawl:sources": "python tools/naiwa_crawler.py --list-sources",
+    "data:stats": "python tools/naiwa_data.py stats",
+    "data:list": "python tools/naiwa_data.py list --limit 30",
+    "deploy": "git add -A && git commit -m \"🐸 更新奶蛙宇宙\" && git push origin main"
+  },
+  "keywords": ["naiwa", "奶蛙", "fighting-game", "canvas", "github-pages", "static-site"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=16"
+  }
+}
