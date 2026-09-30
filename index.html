@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>奶蛙诞生庆典 · 全网观测站</title>
 <link rel="icon" href="naiwa.webp">
-<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="echarts.min.js"></script>
+<script>window.echarts||document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"><\/script>')</script>
 <style>
   :root{
     --bg:#05071a; --panel:rgba(16,22,48,.72); --ink:#e8ecff; --muted:#8b93c8;
@@ -22,11 +23,10 @@
   .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
     background:radial-gradient(1200px 600px at 50% -10%, rgba(34,211,238,.10), transparent 60%),
                radial-gradient(900px 500px at 90% 110%, rgba(255,110,199,.08), transparent 55%)}
-  /* ===== 顶部庆典横幅 ===== */
   .hero{position:relative;z-index:2;text-align:center;padding:44px 16px 6px;overflow:hidden}
   canvas#confetti{position:absolute;inset:0;pointer-events:none}
   .birth-badge{
-    display:inline-block;font-size:12px;letter-spacing:6px;color:var(--cyan);
+    display:inline-block;font-size:12px;letter-spacing:4px;color:var(--cyan);
     border:1px solid rgba(34,211,238,.4);border-radius:30px;padding:6px 22px;margin-bottom:18px;
     text-shadow:0 0 12px rgba(34,211,238,.8);animation:badgePulse 2.4s ease-in-out infinite;
   }
@@ -61,11 +61,12 @@
   .wrap{position:relative;z-index:2;max-width:1280px;margin:0 auto;padding:18px 20px 60px}
 
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:22px 0}
+  .real-tag{grid-column:1/-1;font-size:12px;color:var(--green);letter-spacing:2px}
   .stat{background:var(--panel);backdrop-filter:blur(8px);border-radius:18px;padding:20px 22px;border:1px solid var(--line);position:relative;overflow:hidden;transition:transform .25s, box-shadow .25s}
   .stat:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
-  .stat::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);animation:scanline 3s linear infinite}
+  .stat::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);animation:scanline 3s linear infinite}
   @keyframes scanline{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-  .stat .num{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--frog1);letter-spacing:1px;text-shadow:0 0 18px rgba(255,217,77,.45)}
+  .stat .num{font-size:32px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--frog1);letter-spacing:1px;text-shadow:0 0 18px rgba(255,217,77,.45)}
   .stat .label{color:var(--muted);font-size:13px;margin-top:4px}
   .stat .trend{font-size:12px;margin-top:6px;color:var(--cyan)}
 
@@ -76,7 +77,10 @@
   .card::after{content:"";position:absolute;top:0;left:0;width:36%;height:1px;background:linear-gradient(90deg,var(--cyan),transparent)}
   .card h2{font-size:17px;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .card h2 .tag{font-size:11px;color:var(--cyan);border:1px solid rgba(34,211,238,.35);border-radius:20px;padding:2px 10px;font-weight:normal}
+  .card h2 .tag.sim{color:var(--muted);border-color:rgba(139,147,200,.35)}
   #map{height:480px;width:100%;border-radius:12px}
+  .map-src{margin-top:8px;font-size:11px;color:var(--muted)}
+  .map-src b{color:var(--green)}
   #trend{height:260px;width:100%}
   #pie{height:300px;width:100%}
 
@@ -94,7 +98,7 @@
   .rank .bar{height:100%;border-radius:8px;background:linear-gradient(90deg,#22d3ee,#ffd94d);box-shadow:0 0 10px rgba(255,217,77,.5);transition:width .8s ease}
   .rank .row .val{width:64px;text-align:right;color:var(--frog1);font-weight:700;font-variant-numeric:tabular-nums}
 
-  /* ===== 诞生编年史：发光线 ===== */
+  /* ===== 编年史：发光线 ===== */
   .timeline{position:relative;padding:10px 0 0 30px}
   .timeline::before{
     content:"";position:absolute;left:9px;top:14px;bottom:10px;width:2px;
@@ -113,8 +117,10 @@
   .era .era-title{font-size:16px;font-weight:800;margin-bottom:6px}
   .era .era-title .date{font-size:12px;color:var(--accent);font-weight:700;margin-right:8px;text-shadow:0 0 10px rgba(255,110,199,.5)}
   .era p{font-size:13.5px;line-height:1.8;color:#b8c0e8}
+  .era p b{color:var(--frog1)}
+  .src-note{margin-top:6px;font-size:11px;color:var(--muted);line-height:1.8;border-top:1px dashed rgba(42,58,106,.6);padding-top:10px}
 
-  /* ===== 砸箱子（霓虹） ===== */
+  /* ===== 砸箱子 ===== */
   .case-stage{text-align:center;padding:26px 10px 10px;min-height:380px}
   .case-box{width:150px;height:120px;margin:0 auto 22px;position:relative;cursor:pointer;filter:drop-shadow(0 0 22px rgba(255,217,77,.45));transition:transform .3s}
   .case-box:hover{transform:scale(1.06)}
@@ -143,7 +149,7 @@
   @keyframes hiddenRain{0%{background-position:0% 50%}100%{background-position:300% 50%}}
   .r-hidden .rarity{background:linear-gradient(90deg,#ff6ec7,#22d3ee)}
 
-  /* ===== 送票（霓虹） ===== */
+  /* ===== 送票 ===== */
   .ticket-stage{text-align:center;padding:26px 10px 10px;min-height:380px}
   .ticket{max-width:380px;margin:0 auto;text-align:left}
   .air-ticket{background:linear-gradient(135deg,#0e2a4a,#1c4a7a);color:#fff;border-radius:16px;overflow:hidden;box-shadow:0 0 30px rgba(34,120,200,.35);border:1px solid #2a6ab0;transform:translateX(60px) rotate(4deg);opacity:0;transition:all .8s cubic-bezier(.2,.9,.3,1)}
@@ -166,7 +172,6 @@
   .frog-jump{width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:14px;animation:hop .8s ease infinite;box-shadow:0 0 20px rgba(255,217,77,.4)}
   @keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px) scaleX(1.06)}}
 
-  /* ===== 赛车入口 ===== */
   .race-banner{
     display:flex;align-items:center;gap:22px;flex-wrap:wrap;justify-content:center;text-align:left;
     background:linear-gradient(120deg,rgba(34,211,238,.08),rgba(255,110,199,.08));
@@ -190,17 +195,17 @@
 
 <header class="hero">
   <canvas id="confetti"></canvas>
-  <div class="birth-badge">🎂 2026 · 09 · 30 · 奶蛙诞生庆典 🎂</div>
+  <div class="birth-badge">🎂 奶蛙诞生于 2024 · 10 · 02 🎂</div>
   <div><img class="logo-frog" src="naiwa.webp" alt="奶蛙"></div>
   <h1>奶蛙诞生庆典 · 全网观测站</h1>
-  <div class="subtitle"><span class="live-dot"></span>实时监测 · 思考蛙形象全网出现频次统计 · 全球共同庆祝奶蛙的诞生</div>
+  <div class="subtitle"><span class="live-dot"></span>真实编年史 · 真实实时数据 · 传播光络推演 · 全球共同庆祝</div>
   <div class="party">🎉 🐸 🎉 🐸 🎉</div>
 </header>
 
 <nav><div class="inner">
-  <a href="#live">📊 实时观测</a>
-  <a href="#mapsec">🌍 全球光络图</a>
-  <a href="#history">📜 诞生编年史</a>
+  <a href="#live">📊 实时数据</a>
+  <a href="#mapsec">🌍 传播光络图</a>
+  <a href="#history">📜 奶蛙编年史</a>
   <a href="#case">🎁 砸箱子</a>
   <a href="#ticket">🎫 送票</a>
   <a href="race.html" class="hot">🏎️ 奶蛙赛车</a>
@@ -217,75 +222,81 @@
     <div class="go">▶</div>
   </a>
 
+  <!-- ================= 真实数据 ================= -->
   <div class="stats" id="live">
-    <div class="stat"><div class="num" id="total">0</div><div class="label">全网今日累计使用次数</div><div class="trend">▲ +12.4%</div></div>
-    <div class="stat"><div class="num" id="rate">0</div><div class="label">当前频率（次 / 秒）</div><div class="trend">▲ 持续攀升中</div></div>
-    <div class="stat"><div class="num" id="ips">0</div><div class="label">今日独立 IP 数</div><div class="trend">▲ +8.1%</div></div>
-    <div class="stat"><div class="num" id="peak">0</div><div class="label">今日峰值时段频率</div><div class="trend" id="peakTime">诞生日快乐！🎂</div></div>
+    <div class="real-tag">✅ 以下均为真实数据 · 实时计算 / 拉取</div>
+    <div class="stat"><div class="num" id="age">—</div><div class="label">奶蛙真实年龄（自 2024-10-02 星野诞生起）</div><div class="trend">🎂 诞生于一次 AI 生成的偶发畸变</div></div>
+    <div class="stat"><div class="num" id="runtime">—</div><div class="label">奶蛙观测站已运行</div><div class="trend">🛰️ 每秒实时计时</div></div>
+    <div class="stat"><div class="num" id="stars">加载中</div><div class="label">GitHub 仓库实时数据</div><div class="trend" id="ghSub">从 godnbese-cpu/naiwa-tracker 实时拉取</div></div>
+    <div class="stat"><div class="num" id="clock">—</div><div class="label">当前北京时间</div><div class="trend">🕐 每秒跳动</div></div>
   </div>
 
   <div class="grid">
     <div class="card" id="mapsec">
-      <h2>🌍 全球光络图 <span class="tag">光线即奶蛙的传播 · 滚轮缩放</span></h2>
+      <h2>🌍 奶蛙全球传播光络图 <span class="tag sim">传播路径推演 · 模拟数据</span></h2>
       <div id="map"></div>
+      <div class="map-src" id="mapSrc">地图数据加载中…</div>
     </div>
     <div class="card">
-      <h2>📡 实时使用数据流 <span class="tag">模拟采样</span></h2>
+      <h2>📡 实时使用数据流 <span class="tag sim">情绪推演 · 模拟采样</span></h2>
       <div class="feed"><ul id="feed"></ul></div>
     </div>
   </div>
 
   <div class="grid">
     <div class="card">
-      <h2>📈 24 小时使用频率趋势</h2>
+      <h2>📈 24 小时使用频率趋势 <span class="tag sim">模拟推演</span></h2>
       <div id="trend"></div>
     </div>
     <div class="card">
-      <h2>🥧 使用场景分布</h2>
+      <h2>🥧 使用场景分布 <span class="tag sim">依据真实传播路径归类 · 数值推演</span></h2>
       <div id="pie"></div>
     </div>
   </div>
 
   <div class="card">
-    <h2>🏆 全球国家 / 地区使用频率排行榜</h2>
+    <h2>🏆 全球国家 / 地区使用频率排行榜 <span class="tag sim">模拟推演</span></h2>
     <div class="rank" id="rank"></div>
   </div>
 
+  <!-- ================= 真实编年史 ================= -->
   <div class="card" id="history">
-    <h2>📜 奶蛙诞生编年史 <span class="tag">民间演绎版 · 滚动翻开</span></h2>
+    <h2>📜 奶蛙编年史 <span class="tag">真实考证版 · 滚动翻开</span></h2>
     <div class="timeline">
       <div class="pulse-dot"></div>
       <div class="era">
-        <div class="era-title"><span class="date">太古纪元</span>🥚 一只青蛙的沉思</div>
-        <p>在互联网某个无人知晓的角落，一只通体奶黄的青蛙把下巴搁在手上，陷入了漫长的思考。没有人知道它在想什么——这成了互联网最伟大的谜题之一。</p>
+        <div class="era-title"><span class="date">2024.10.02</span>🥚 星野诞生</div>
+        <p>星野 App 用户<b>「纲手[百豪]」</b>创建"奶龙"AI 智能体（ID: zNCvQDKfXy）。低精度 AI 对提示词的理解发生偏差，生成的头像形体畸变：<b>头部缩小、躯干膨大、四肢纤细，形似青蛙</b>。奶蛙在一场算法意外中偶然诞生，原智能体后续无法搜索，源头近乎"失传媒体"。</p>
       </div>
       <div class="era">
-        <div class="era-title"><span class="date">表情包纪元</span>💬 "让我想想"的诞生</div>
-        <p>某位匿名网友为这张沉思照配上了第一句台词："让我想想"。自此，青蛙的沉思不再是它自己的沉思，而成了所有拖延症患者的共同面具。</p>
+        <div class="era-title"><span class="date">2024.12</span>📦 流入抖音</div>
+        <p>抖音博主<b>"欢迎大家恐龙世界"</b>（现已私密）将图片搬运至抖音，以<b>"变异奶龙"</b>之名在抽象梗圈流传。此时它还没有笑声，也还没有"奶蛙"这个名字。</p>
       </div>
       <div class="era">
-        <div class="era-title"><span class="date">奶化纪元</span>🧬 "奶蛙"得名</div>
-        <p>形象传入中文互联网。因其通体奶黄、圆润软糯，如同一块会思考的奶糖，网友爱称"奶蛙"。"奶"字既指颜色，也暗含"奶一口"的宠溺之意。</p>
+        <div class="era-title"><span class="date">2025.03</span>🧬 缝合进化</div>
+        <p>网友把奶蛙与沧州抖音博主<b>"季洪行"</b>的表情风格、游戏博主<b>"八级哥"的魔性笑声"齁齁齁"</b>层层缝合。静态猎奇图开始"动了"，并在很长时间内被误认为是"季洪行 × 奶龙"的 AI 融合产物。</p>
       </div>
       <div class="era">
-        <div class="era-title"><span class="date">斗图纪元</span>⚔️ 万能回复的崛起</div>
-        <p>"容我三思"——奶蛙成为群聊斗图的战略级武器。当问题难以回答、敷衍需要体面、回复必须可爱时，奶蛙从不缺席。据不完全统计，它至少化解了九亿次尴尬。</p>
+        <div class="era-title"><span class="date">2026.02</span>🚀 亿级破圈</div>
+        <p>鬼畜、AI 续写、魔改短剧席卷抖音、B 站、小红书。奶蛙与<b>"牛来""美团袋鼠"</b>并称<b>"黄色三幻神"</b>，从圈层黑话变成评论区里人人都懂的情绪按钮。</p>
       </div>
       <div class="era">
-        <div class="era-title"><span class="date">二创纪元</span>🎨 表情包宇宙大爆炸</div>
-        <p>奶蛙宇宙开始膨胀：举牌蛙、加班蛙、发疯蛙、佛系蛙……每一个变体都是当代年轻人精神状态的一面镜子。奶蛙不再只是表情包，而是一门显学。</p>
+        <div class="era-title"><span class="date">2026.03</span>⚔️ 官方破防</div>
+        <p>奶龙官方呼吁停止丑化二创，将评论区发奶蛙的用户一律拉黑。限制没能终结迷因，反而为它盖上<b>"官方破防"的最高认证章</b>，热度不降反升。</p>
       </div>
       <div class="era">
-        <div class="era-title"><span class="date">AI 纪元</span>🤖 算力加持的井喷</div>
-        <p>AI 生成工具普及后，奶蛙二创呈指数级增长。人人都能让奶蛙思考任何事——尽管它思考的结论，仍然是"让我再想想"。</p>
+        <div class="era-title"><span class="date">2026.08</span>🔍 溯源成功</div>
+        <p>B 站用户<b>"雾蚀心忘症"</b>在星野 App 中找到原始智能体，失传媒体社群长达数月的追寻画上句号。8 月 8 日又浮出一条疑似更早的视频（主流理论：后期换源），成为奶蛙考古学的悬案。</p>
       </div>
       <div class="era">
-        <div class="era-title"><span class="date">诞生日</span>🎂 2026·09·30 观测站建立</div>
-        <p>为庆祝奶蛙的诞生，<b>奶蛙诞生庆典观测站</b>正式上线，向全球直播这只青蛙的影响力。同日，首届"奶蛙极速杯"大奖赛鸣笛开跑。</p>
+        <div class="era-title"><span class="date">2026.09.30</span>🎂 观测站建立</div>
+        <p>为庆祝这只<b>"什么都没做，但看起来已经看透了一切"</b>的青蛙，奶蛙观测站正式上线——就是你正在看的这个页面。首届"奶蛙极速杯"大奖赛同日鸣笛开跑。</p>
       </div>
-      <div class="era">
-        <div class="era-title"><span class="date">未来纪元</span>🚀 奶蛙登月计划（未完待续）</div>
-        <p>传说当奶蛙思考到第一万次时，它将得出那个终极答案。而观测站的使命，就是见证这一刻的到来。历史仍在书写中……</p>
+      <div class="src-note">
+        📚 资料来源：<a href="https://lostmediawiki.cn/deleted:naiwa" target="_blank" style="color:#22d3ee">失传媒体中文维基</a> ·
+        <a href="https://k.sina.com.cn/article_5729156460_1557bfd6c020020ade.html" target="_blank" style="color:#22d3ee">新浪新闻《人们找到了奶蛙的创造者》</a> ·
+        <a href="https://m.toutiao.com/article/7658550916395663914" target="_blank" style="color:#22d3ee">今日头条《2026年热门互联网IP深度研究报告》</a> ·
+        <a href="https://www.naiwa.world/" target="_blank" style="color:#22d3ee">naiwa.world</a>
       </div>
     </div>
   </div>
@@ -330,7 +341,7 @@
 
   <footer>
     <div class="disclaimer">
-      🐸 本站为庆祝奶蛙诞生而建 · 当前为 <b>演示模式</b>（高仿真模拟数据流），接入真实数据只需对接 <code>/api/stream</code> 接口，前端零改动。
+      🐸 本站为庆祝奶蛙诞生（2024-10-02 · 星野 App）而建 · <b>绿色"真实数据"卡片为实时真实数据</b>；标注"模拟推演"的图表用于演示传播形态，接入真实平台数据只需对接 <code>/api/stream</code> 接口
     </div>
   </footer>
 </div>
@@ -338,27 +349,19 @@
 <script>
 /* ================= 背景粒子光络网 ================= */
 (function(){
-  const cv = document.getElementById("netbg"), ctx = cv.getContext("2d");
+  const cv=document.getElementById("netbg"),ctx=cv.getContext("2d");
   let W,H,pts=[];
-  function resize(){ W=cv.width=innerWidth; H=cv.height=innerHeight;
-    pts = Array.from({length: Math.min(90, W*H/16000)},()=>({
-      x:Math.random()*W, y:Math.random()*H,
-      vx:(Math.random()-.5)*.45, vy:(Math.random()-.5)*.45
-    }));
+  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;
+    pts=Array.from({length:Math.min(90,W*H/16000)},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.45,vy:(Math.random()-.5)*.45}));
   }
-  resize(); addEventListener("resize",resize);
+  resize();addEventListener("resize",resize);
   (function tick(){
     ctx.clearRect(0,0,W,H);
-    for(const p of pts){
-      p.x+=p.vx; p.y+=p.vy;
-      if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1;
-      ctx.fillStyle="rgba(34,211,238,.7)";
-      ctx.beginPath();ctx.arc(p.x,p.y,1.4,0,7);ctx.fill();
-    }
+    for(const p of pts){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;
+      ctx.fillStyle="rgba(34,211,238,.7)";ctx.beginPath();ctx.arc(p.x,p.y,1.4,0,7);ctx.fill();}
     for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
       const a=pts[i],b=pts[j],d=Math.hypot(a.x-b.x,a.y-b.y);
-      if(d<130){ ctx.strokeStyle=`rgba(255,217,77,${(1-d/130)*.28})`;
-        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke(); }
+      if(d<130){ctx.strokeStyle=`rgba(255,217,77,${(1-d/130)*.28})`;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
     }
     requestAnimationFrame(tick);
   })();
@@ -366,32 +369,52 @@
 
 /* ================= 顶部彩带 ================= */
 (function(){
-  const cv=document.getElementById("confetti"),ctx=cv.getContext("2d");
-  const hero=cv.parentElement;
-  let W,H,ps=[];
+  const cv=document.getElementById("confetti"),ctx=cv.getContext("2d"),hero=cv.parentElement;
+  let W,H;
   function resize(){W=cv.width=hero.offsetWidth;H=cv.height=hero.offsetHeight;}
   resize();addEventListener("resize",resize);
   const colors=["#ffd94d","#22d3ee","#ff6ec7","#7ec850","#f5b800"];
-  for(let i=0;i<70;i++)ps.push({
-    x:Math.random()*1400,y:Math.random()*400,
-    w:5+Math.random()*6,h:8+Math.random()*8,
-    vy:1+Math.random()*2.2,vx:(Math.random()-.5)*1.4,
-    r:Math.random()*Math.PI,vr:(Math.random()-.5)*.12,
-    c:colors[i%colors.length]
-  });
+  const ps=Array.from({length:70},(_,i)=>({x:Math.random()*1400,y:Math.random()*400,w:5+Math.random()*6,h:8+Math.random()*8,vy:1+Math.random()*2.2,vx:(Math.random()-.5)*1.4,r:Math.random()*Math.PI,vr:(Math.random()-.5)*.12,c:colors[i%colors.length]}));
   (function tick(){
     ctx.clearRect(0,0,W,H);
-    for(const p of ps){
-      p.y+=p.vy;p.x+=p.vx;p.r+=p.vr;
-      if(p.y>H+20){p.y=-20;p.x=Math.random()*W;}
-      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);
-      ctx.fillStyle=p.c;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();
-    }
+    for(const p of ps){p.y+=p.vy;p.x+=p.vx;p.r+=p.vr;if(p.y>H+20){p.y=-20;p.x=Math.random()*W;}
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore();}
     requestAnimationFrame(tick);
   })();
 })();
 
-/* ================= 模拟数据引擎 ================= */
+/* ================= 真实数据引擎 ================= */
+// 1) 奶蛙真实年龄：2024-10-02 星野诞生（见编年史考证）
+const NAIWA_BIRTH=new Date("2024-10-02T00:00:00+08:00");
+(function(){
+  const el=document.getElementById("age");
+  const days=Math.floor((Date.now()-NAIWA_BIRTH.getTime())/86400000);
+  el.textContent=days.toLocaleString()+" 天";
+})();
+// 2) 观测站运行时长：仓库真实创建时间 2026-09-30T07:42:37Z（GitHub API）
+const SITE_BORN=new Date("2026-09-30T07:42:37Z");
+function updateRuntime(){
+  const s=Math.max(0,Math.floor((Date.now()-SITE_BORN.getTime())/1000));
+  const h=String(Math.floor(s/3600)).padStart(2,"0");
+  const m=String(Math.floor(s%3600/60)).padStart(2,"0");
+  const ss=String(s%60).padStart(2,"0");
+  document.getElementById("runtime").textContent=`${h}:${m}:${ss}`;
+}
+updateRuntime();setInterval(updateRuntime,1000);
+// 3) GitHub 仓库真实数据（公开 API，无需鉴权）
+fetch("https://api.github.com/repos/godnbese-cpu/naiwa-tracker").then(r=>r.json()).then(d=>{
+  if(d&&d.stargazers_count!==undefined){
+    document.getElementById("stars").innerHTML=`⭐ ${d.stargazers_count} · 🍴 ${d.forks_count} · 📦 ${(d.size/1024).toFixed(1)}MB`;
+    document.getElementById("ghSub").textContent=`开源仓库 godnbese-cpu/naiwa-tracker · 实时`;
+  }else{document.getElementById("stars").textContent="暂时无法拉取";}
+}).catch(()=>{document.getElementById("stars").textContent="暂时无法拉取";});
+// 4) 北京时间
+function updateClock(){
+  document.getElementById("clock").textContent=new Date().toLocaleTimeString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false});
+}
+updateClock();setInterval(updateClock,1000);
+
+/* ================= 模拟推演引擎（已明确标注） ================= */
 const countries=["中国","美国","日本","韩国","印度","泰国","越南","马来西亚","新加坡","印度尼西亚","菲律宾","英国","法国","德国","意大利","西班牙","俄罗斯","加拿大","巴西","澳大利亚","埃及","南非","墨西哥","土耳其","沙特阿拉伯","新西兰","荷兰","瑞典","波兰","阿根廷"];
 const coords={
   "中国":[116.4,39.9],"美国":[-98,39.5],"日本":[139.7,35.7],"韩国":[127,37.5],"印度":[77.2,28.6],
@@ -403,31 +426,11 @@ const coords={
 };
 const weights=[100,86,64,58,52,47,44,40,38,36,33,30,28,27,24,22,20,19,17,16,14,12,11,10,9,8,7,6,5,4];
 const baseData={};
-countries.forEach((c,i)=>{ baseData[c]=Math.round(9000*(weights[i]||4)/100*(0.75+Math.random()*0.5)); });
-const acts=["在斗图中发出了奶蛙思考表情包","在评论区贴出奶蛙配图「让我想想」","在弹幕里刷了奶蛙语录","把奶蛙设为群表情置顶","转发了奶蛙二创动图","在论坛发布了奶蛙主题帖","用奶蛙回应了工作群消息","收藏了奶蛙高清原图","给奶蛙梗图点了赞","用奶蛙回复了「容我三思」","为奶蛙诞辰点了一支蜡烛"];
+countries.forEach((c,i)=>{baseData[c]=Math.round(9000*(weights[i]||4)/100*(0.75+Math.random()*0.5));});
+const acts=["在评论区发出奶蛙「齁齁齁」","转发了黄色三幻神合体帖","在弹幕里刷了奶蛙语录","把奶蛙设为群表情置顶","转发了奶蛙鬼畜二创","用奶蛙回应了工作群消息","收藏了奶蛙高清原图","给奶蛙梗图点了赞","用奶蛙回复了「容我三思」","在奶龙官方评论区发奶蛙（勇）"];
 function maskIP(){return `${1+Math.floor(Math.random()*223)}.${Math.floor(Math.random()*256)}.${Math.floor(Math.random()*256)}.*`;}
 function randCountry(){return countries[Math.floor(Math.random()*Math.max(6,countries.length*0.5))];}
 function now(){const d=new Date();return d.toTimeString().slice(0,8);}
-
-/* ================= 计数器 ================= */
-let total=2846739+Math.floor(Math.random()*50000),ipCount=892431+Math.floor(Math.random()*5000),rate=240+Math.floor(Math.random()*80),peak=0;
-function countUp(el,target){
-  const start=+el.textContent.replace(/,/g,"")||0,diff=target-start,t0=performance.now();
-  (function step(t){const p=Math.min((t-t0)/600,1);el.textContent=Math.round(start+diff*p).toLocaleString();if(p<1)requestAnimationFrame(step);})(t0);
-}
-countUp(document.getElementById("total"),total);
-countUp(document.getElementById("ips"),ipCount);
-countUp(document.getElementById("rate"),rate);
-countUp(document.getElementById("peak"),580);
-setInterval(()=>{
-  rate=Math.max(120,rate+Math.floor(Math.random()*21)-10);
-  total+=rate*2;ipCount+=Math.floor(Math.random()*40);
-  if(rate>peak){peak=rate;document.getElementById("peakTime").textContent="▲ 刚刚刷新";}
-  countUp(document.getElementById("total"),total);
-  countUp(document.getElementById("ips"),ipCount);
-  countUp(document.getElementById("rate"),rate);
-  countUp(document.getElementById("peak"),peak+320);
-},2000);
 
 /* ================= 实时数据流 ================= */
 const feedEl=document.getElementById("feed");
@@ -441,29 +444,29 @@ function pushFeed(){
 for(let i=0;i<10;i++)pushFeed();
 setInterval(pushFeed,900);
 
-/* ================= 全球光络图（多源容错） ================= */
+/* ================= 全球光络图（本地数据优先，多源容错） ================= */
 const mapChart=echarts.init(document.getElementById("map"));
 const GEO_SOURCES=[
-  "https://cdn.jsdelivr.net/gh/apache/echarts@4.9.0/map/json/world.json",
-  "https://geo.datav.aliyun.com/areas_v3/bound/world.geojson",
-  "https://fastly.jsdelivr.net/gh/apache/echarts@4.9.0/map/json/world.json"
+  {url:"world.json",label:"本地文件（同源加载，零外部依赖）"},
+  {url:"https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/json/world.json",label:"jsdelivr CDN 备用"},
+  {url:"https://unpkg.com/echarts@4.9.0/map/json/world.json",label:"unpkg CDN 备用"}
 ];
 (async function(){
-  let geo=null;
-  for(const u of GEO_SOURCES){
-    try{ const r=await fetch(u,{cache:"force-cache"}); if(r.ok){ geo=await r.json(); break; } }catch(e){}
+  let geo=null,usedLabel="";
+  for(const src of GEO_SOURCES){
+    try{
+      const r=await fetch(src.url,{cache:"force-cache"});
+      if(r.ok){geo=await r.json();usedLabel=src.label;break;}
+    }catch(e){}
   }
-  if(!geo){
-    document.getElementById("map").innerHTML='<div style="text-align:center;padding:120px 0;color:#8b93c8">所有地图源均加载失败，请检查网络后刷新</div>';
-    return;
-  }
+  const srcEl=document.getElementById("mapSrc");
+  if(!geo){srcEl.innerHTML="❌ 所有地图源均加载失败，请刷新重试";return;}
+  srcEl.innerHTML=`<b>✓ 地图数据已加载</b>：${usedLabel}`;
   echarts.registerMap("world",geo);
   const linesData=countries.filter(c=>c!=="中国").map(c=>({coords:[coords["中国"],coords[c]]}));
   mapChart.setOption({
     backgroundColor:"transparent",
-    tooltip:{
-      formatter:p=>p.seriesType==="effectScatter"?`${p.name}：${baseData[p.name].toLocaleString()} 次/日 🐸`:"奶蛙诞生之光 · 传播线"
-    },
+    tooltip:{formatter:p=>p.seriesType==="effectScatter"?`${p.name}：${baseData[p.name].toLocaleString()} 次/日（推演）`:"奶蛙传播之光 · 推演线"},
     geo:{
       map:"world",roam:true,zoom:1.2,scaleLimit:{min:0.8,max:8},
       itemStyle:{areaColor:"#0b1430",borderColor:"#2a3a6a",borderWidth:0.6,shadowColor:"rgba(34,211,238,.25)",shadowBlur:6},
@@ -495,7 +498,7 @@ const GEO_SOURCES=[
   });
 })();
 
-/* ================= 趋势图（霓虹） ================= */
+/* ================= 趋势图 ================= */
 const trendChart=echarts.init(document.getElementById("trend"));
 const hours=[],vals=[];
 for(let h=0;h<24;h++){hours.push(h+":00");vals.push(Math.round(120+380*Math.exp(-Math.pow((h-21)/4.5,2))+260*Math.exp(-Math.pow((h-13)/3.5,2))+Math.random()*40));}
@@ -506,14 +509,14 @@ trendChart.setOption({
   yAxis:{type:"value",axisLabel:{color:"#8b93c8"},splitLine:{lineStyle:{color:"rgba(42,58,106,.4)"}}},
   grid:{left:50,right:20,top:20,bottom:30},
   series:[{
-    name:"使用频率(次/秒)",type:"line",smooth:true,data:vals,symbol:"none",
+    name:"使用频率(次/秒·推演)",type:"line",smooth:true,data:vals,symbol:"none",
     lineStyle:{width:3,color:"#22d3ee",shadowBlur:12,shadowColor:"rgba(34,211,238,.8)"},
     areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:"rgba(34,211,238,.35)"},{offset:1,color:"rgba(34,211,238,0)"}])}
   }]
 });
 setInterval(()=>{const nv=Math.max(100,vals[23]+Math.floor(Math.random()*31)-15);vals.shift();vals.push(nv);trendChart.setOption({series:[{data:vals}]});},3000);
 
-/* ================= 饼图（霓虹） ================= */
+/* ================= 场景饼图（按真实传播形态归类） ================= */
 const pieChart=echarts.init(document.getElementById("pie"));
 pieChart.setOption({
   backgroundColor:"transparent",
@@ -524,11 +527,11 @@ pieChart.setOption({
     label:{formatter:"{b}\n{d}%",color:"#8b93c8"},
     itemStyle:{borderRadius:8,borderColor:"#05071a",borderWidth:3},
     data:[
-      {value:42,name:"表情包斗图",itemStyle:{color:"#f5b800"}},
-      {value:23,name:"评论区配图",itemStyle:{color:"#22d3ee"}},
-      {value:15,name:"弹幕刷屏",itemStyle:{color:"#7ec850"}},
-      {value:12,name:"社群转发",itemStyle:{color:"#ff6ec7"}},
-      {value:8,name:"帖子/长文",itemStyle:{color:"#8b6bff"}}
+      {value:34,name:"评论区情绪按钮",itemStyle:{color:"#f5b800"}},
+      {value:26,name:"鬼畜/魔改二创",itemStyle:{color:"#22d3ee"}},
+      {value:18,name:"表情包斗图",itemStyle:{color:"#7ec850"}},
+      {value:14,name:"AI续写短剧",itemStyle:{color:"#ff6ec7"}},
+      {value:8,name:"社群转发",itemStyle:{color:"#8b6bff"}}
     ]
   }]
 });
@@ -544,6 +547,7 @@ function renderRank(){
      <span class="val">${baseData[p].toLocaleString()}</span></div>`).join("");
 }
 renderRank();
+setInterval(()=>{const p=randCountry();baseData[p]+=Math.floor(Math.random()*120);renderRank();},4000);
 
 /* ================= 时间轴滚动显现 ================= */
 const eras=document.querySelectorAll(".era");
@@ -556,7 +560,7 @@ const prizes=[
   {r:"common",rn:"普通",n:"奶蛙语录「让我想想」",d:"百年后依然没想好的那句名言。",w:25},
   {r:"rare",rn:"稀有",n:"奶蛙高清壁纸",d:"放大八倍依然奶得均匀。",w:15},
   {r:"rare",rn:"稀有",n:"奶蛙表情包合集（30张）",d:"一次砸出一整套斗图弹药。",w:10},
-  {r:"epic",rn:"史诗",n:"奶蛙限定动图",d:"会动的奶蛙，思考频率提升300%。",w:6},
+  {r:"epic",rn:"史诗",n:"奶蛙鬼畜视频素材包",d:"含「齁齁齁」原声，慎用。",w:6},
   {r:"epic",rn:"史诗",n:"虚拟奶蛙手办",d:"摸不到，但心可以摸到。",w:2.5},
   {r:"legend",rn:"传说",n:"纯金奶蛙",d:"999足金（虚拟），保值全靠心情。",w:1},
   {r:"legend",rn:"传说",n:"奶蛙之魂",d:"装备后斗图胜率+100%。",w:0.5},
@@ -625,7 +629,7 @@ ticketBtn.addEventListener("click",()=>{
         <div class="t-row"><span>座位 <b>${seat}</b></span><span>票价 <b>¥${price}.5</b></span></div>
       </div>
       <div class="ticket-teeth"></div>
-      <div class="ticket-foot">诞辰专列 · 本次列车全程播放「让我想想」· 请勿在思考中越过黄线 🚄</div>
+      <div class="ticket-foot">诞辰专列 · 本次列车全程播放「齁齁齁」· 请勿在思考中越过黄线 🚄</div>
     </div></div>`;
   }
   ticketArea.innerHTML=html;
