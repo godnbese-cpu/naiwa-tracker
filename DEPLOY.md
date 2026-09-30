@@ -100,6 +100,15 @@ git add assets/naiwa-images/naiwa-data.js
 
 ## 七、常见问题
 
+**Q：推送时报 `refusing to allow a Personal Access Token to create or update workflow`**
+A：你的 token 没有 **`workflow`** 权限。GitHub 规定：**任何**对 `.github/workflows/` 下文件的
+创建/修改都必须带 `workflow` 权限，普通 `repo` 权限也不行。两种解决办法：
+
+1. 去 GitHub → Settings → Developer settings → Personal access tokens，
+   重新生成 token 时**勾上 `workflow`**，然后用它推；
+2. 或者干脆不用 Actions 部署，改用在 Settings → Pages 里选 `main` 分支发布
+   （本项目默认就是这个方式，`.github/workflows/pages.yml` 只是可选项）。
+
 **Q：推送时提示 `remote: Support for password authentication was removed`**
 A：GitHub 不再接受账号密码。用 Personal Access Token（Settings → Developer settings →
 Personal access tokens）当密码，或者配置 SSH key：

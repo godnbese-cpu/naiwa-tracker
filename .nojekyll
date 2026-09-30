@@ -1,0 +1,2 @@
+GitHub Pages 默认会用 Jekyll 处理站点，点开头的文件（比如本目录的 .gitkeep）会被忽略。
+这个空文件告诉 Pages「不要用 Jekyll，原样发布」，站点里的所有静态文件就都能正常访问了。

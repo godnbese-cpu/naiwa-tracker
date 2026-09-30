@@ -510,6 +510,12 @@ def crawl(sources: list[dict], limit: int, out_dir: str, license_only: bool,
             if min_px and w and h and (w < min_px or h < min_px):
                 stats["filtered"] += 1
                 continue
+            # 尺寸探测失败的保护：WebP/GIF 等格式可能拿不到宽高，
+            # 这时用「体积下限」兜底，避免 1KB 的小图标混进图片库。
+            if min_px and (not w or not h) and len(data) < 12 * 1024:
+                stats["filtered"] += 1
+                log(f"  ⏭️  跳过过小文件（{len(data)}B，尺寸未知）", quiet)
+                continue
 
             sha1 = hashlib.sha1(data).hexdigest()
             if sha1 in seen_hash:
