@@ -64,6 +64,11 @@ EXCLUDE_NAMES = {".git", ".github", "tools", "node_modules", "__pycache__",
                  "_shots", "dump", ".acl-recovery"}
 EXCLUDE_EXT = {".pyc", ".log", ".tmp"}
 
+# assets/naiwa-images/ 里的图片是采集来的素材，页面并不引用它们
+# （12 位斗士用的是仓库根目录的 naiwa*.webp），带上只会白白多出几 MB。
+EXCLUDE_IMAGE_DIR = os.path.join("assets", "naiwa-images")
+EXCLUDE_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
 
 def find_git():
     """git 可能不在 PATH 里（本机就是这种情况），顺手找几个常见位置。"""
@@ -108,6 +113,9 @@ def collect(out_dir):
                     continue
                 src = os.path.join(cur, fn)
                 rel = os.path.relpath(src, ROOT)
+                # 跳过采集素材的图片本体（页面不引用，避免包体虚高）
+                if rel.startswith(EXCLUDE_IMAGE_DIR) and os.path.splitext(fn)[1].lower() in EXCLUDE_IMAGE_EXT:
+                    continue
                 copy_one(src, os.path.join(out_dir, rel))
 
     return n_files, n_bytes
