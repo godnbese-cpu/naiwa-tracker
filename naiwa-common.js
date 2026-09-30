@@ -132,6 +132,14 @@
   /* ---------------- 换色精灵（程序化生成奶蛙军团） ---------------- */
   var _spriteCache = {};
 
+  /* 等比缩放并居中：把任意宽高比的图放进正方形画布，不拉伸 */
+  function fitBox(iw, ih, size) {
+    if (!iw || !ih) return { x: 0, y: 0, w: size, h: size };
+    var s = Math.min(size / iw, size / ih);
+    var w = iw * s, h = ih * s;
+    return { x: (size - w) / 2, y: (size - h) / 2, w: w, h: h };
+  }
+
   /**
    * 生成奶蛙换色精灵（同步；需先 await NAIWA.preloadFrogs()）
    * @param {string} src 源图路径
@@ -165,12 +173,17 @@
     }
 
     /* 1. 基础绘制（可带色相滤镜） */
+    /* 1. 基础绘制（必须保持原始宽高比，否则角色会被压扁变形）
+       ⚠️ 奶蛙原图尺寸并不统一：standing 366×480、smiling 448×480、
+       thinking 720×709、主图 474×474。直接 drawImage(im,0,0,size,size)
+       会把竖长的图硬压成正方形，角色就被压扁、看起来像一块方块。 */
+    var fit = fitBox(im.width, im.height, size);
     if (opt.hue || opt.sat) {
       try {
         ctx.filter = "hue-rotate(" + (opt.hue || 0) + "deg) saturate(" + (opt.sat || 1) + ")";
       } catch (e) { }
     }
-    ctx.drawImage(im, 0, 0, size, size);
+    ctx.drawImage(im, fit.x, fit.y, fit.w, fit.h);
     ctx.filter = "none";
 
     /* 2. 颜色叠加，只作用于已有像素 */
@@ -194,9 +207,10 @@
       halo.width = size; halo.height = size;
       var hc = halo.getContext("2d");
       hc.globalAlpha = 0.5;
+      var hf = fitBox(im.width, im.height, size);
       for (var a = 0; a < 12; a++) {
         var ang = a / 12 * Math.PI * 2;
-        hc.drawImage(im, Math.cos(ang) * 3, Math.sin(ang) * 3, size, size);
+        hc.drawImage(im, hf.x + Math.cos(ang) * 3, hf.y + Math.sin(ang) * 3, hf.w, hf.h);
       }
       hc.globalCompositeOperation = "source-in";
       hc.fillStyle = opt.stroke;
@@ -222,8 +236,9 @@
     var ctx = cv.getContext("2d");
     var im = imgCache[src] && imgCache[src]._img;
     if (im && im.width) {
+      var fit = fitBox(im.width, im.height, size);
       try { ctx.filter = filter; } catch (e) { }
-      ctx.drawImage(im, 0, 0, size, size);
+      ctx.drawImage(im, fit.x, fit.y, fit.w, fit.h);
       ctx.filter = "none";
     }
     _spriteCache[key] = cv;

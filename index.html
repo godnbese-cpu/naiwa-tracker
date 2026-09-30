@@ -167,6 +167,18 @@
   .era p{font-size:13.5px;line-height:1.8;color:#b8c0e8}
   .era p b{color:var(--frog1)}
   .src-note{margin-top:6px;font-size:11px;color:var(--muted);line-height:1.8;border-top:1px dashed rgba(42,58,106,.6);padding-top:10px}
+  .hint-line{font-size:11.5px;color:var(--muted);line-height:1.8;margin-bottom:14px;
+    border-left:3px solid var(--cyan);padding-left:11px}
+
+  /* ===== 新增模块：趋势对比 / 热度时钟 / 迷因成分 / 传播路径 / 影响力 ===== */
+  .cmp-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-bottom:10px}
+  .cmp-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  #compare{height:260px;width:100%}
+  #clock{height:250px;width:100%}
+  #meme{height:270px;width:100%}
+  #sankey{height:300px;width:100%}
+  #impact{height:280px;width:100%}
+  .mini-note{font-size:10.5px;color:var(--muted);line-height:1.8;margin-top:8px}
 
   /* ===== 砸箱子 ===== */
   .case-stage{text-align:center;padding:26px 10px 10px;min-height:380px}
@@ -323,9 +335,45 @@
     <div class="rank" id="rank"></div>
   </div>
 
+  <!-- ================= 新增：多条目真实趋势对比 ================= -->
+  <div class="card">
+    <h2 id="cmpTitle">📈 条目热度对比 · 真实月度访问量 <span class="tag" id="cmpTag" style="color:#7ec850;border-color:rgba(126,200,80,.4)">Wikimedia 真实数据</span></h2>
+    <div class="cmp-legend" id="cmpLegend"></div>
+    <div id="compare"></div>
+    <div class="mini-note" id="cmpNote"></div>
+  </div>
+
+  <div class="grid-2">
+    <!-- 24 小时热度时钟 -->
+    <div class="card">
+      <h2>🕐 24 小时热度时钟 <span class="tag sim">推演 · 按平台活跃时段建模</span></h2>
+      <div id="clock"></div>
+      <div class="mini-note">按抖音 / B 站 / 小红书的用户活跃时段加权：晚间 20-23 点是奶蛙梗图的爆发窗口，凌晨 3-6 点跌到谷底。</div>
+    </div>
+    <!-- 迷因成分 -->
+    <div class="card">
+      <h2>🧬 奶蛙迷因成分分析 <span class="tag sim">推演</span></h2>
+      <div id="meme"></div>
+      <div class="mini-note">一只奶蛙梗图的「好笑」来自这些元素的叠加；占比按传播样本推演。</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🌊 传播路径桑基图 <span class="tag sim">依据真实编年史构建 · 流量为推演</span></h2>
+    <div id="sankey"></div>
+    <div class="mini-note">从「一次 AI 畸变」到「全网情绪按钮」的完整链路：平台 → 传播形态 → 最终归宿。</div>
+  </div>
+
+  <div class="card">
+    <h2>💥 影响力面板 <span class="tag">真实事件 × 推演数值</span></h2>
+    <div id="impact"></div>
+    <div class="mini-note">每个事件的「冲击力」= 当时热度增幅 × 持续时长（推演），事件本身与日期均为真实考证。</div>
+  </div>
+
   <!-- ================= 真实编年史 ================= -->
   <div class="card" id="history">
     <h2>📜 奶蛙编年史 <span class="tag">真实考证版 · 滚动翻开</span></h2>
+    <div class="hint-line">下面每一段都有可查证的出处；带 🔬 标记的数据来自 Wikimedia 官方接口的真实测量。</div>
     <div class="timeline">
       <div class="pulse-dot"></div>
       <div class="era">
@@ -410,6 +458,8 @@
   </footer>
 </div>
 
+<!-- 共享引擎：必须在内联脚本之前加载（内联脚本会用到 NAIWA） -->
+<script src="naiwa-common.js"></script>
 <script>
 /* ================= 顶部彩带 ================= */
 (function(){
@@ -515,7 +565,7 @@ if(REAL){
     REAL.__realApplied=true;
   }
   /* 2) 渲染真实数据面板 + 用真实月度趋势替换模拟趋势曲线 */
-  window.__NAIWA_REALITY_READY=function(){
+  window.__NAIWA_renderReality = function(){
     const card=document.getElementById("realityCard");
     const kpis=document.getElementById("realityKpis");
     const bars=document.getElementById("realityBars");
@@ -558,11 +608,6 @@ if(REAL){
 
     card.style.display="block";
     window.__NAIWA_REALITY=REAL;
-    /* 地图来源说明也标注真实数据 */
-    const srcEl=document.getElementById("mapSrc");
-    if(srcEl&&REAL.__realApplied&&srcEl.innerHTML.indexOf("\u771f\u5b9e\u6570\u636e")<0){
-      srcEl.innerHTML='<b style="color:#7ec850">\u2713 \u70ed\u529b\u503c\u5df2\u5207\u6362\u4e3a\u771f\u5b9e\u6570\u636e</b>\uff08Wikimedia \u5206\u56fd\u5bb6\u8bbf\u95ee\u91cf\uff09\u00b7 '+srcEl.innerHTML;
-    }
   };
 }
 
@@ -605,7 +650,7 @@ for(let i=0;i<10;i++)pushFeed();
 setInterval(pushFeed,900);
 
 /* ================= 全球光络图（真实地图热力 + 频次气泡 + 传播弧线） ================= */
-const mapChart=echarts.init(document.getElementById("map"));
+const mapChart=echarts.init(document.getElementById("map"),null,{renderer:"canvas"});
 const GEO_SOURCES=[
   {url:"world.json",label:"本地文件（同源加载，零外部依赖）"},
   {url:"https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/json/world.json",label:"jsdelivr CDN 备用"},
@@ -852,6 +897,26 @@ const pos={};
     mapChart.dispatchAction({type:"highlight",seriesIndex:0,name:en});
     setTimeout(()=>mapChart.dispatchAction({type:"downplay",seriesIndex:0,name:en}),900);
   }
+
+  /* 地图数据就绪后：应用真实数据 → 刷新排行榜 → 渲染真实数据面板
+     ⚠️ 顺序很重要：数据面板和排行榜都依赖这里算好的值，
+     放在脚本最末尾会因为异步还没完成而拿不到数据。 */
+  if(REAL){
+    window.__NAIWA_REALITY = REAL;
+    if(typeof window.__NAIWA_renderReality==="function") window.__NAIWA_renderReality();
+    try{ renderRank(); }catch(e){}
+    const srcEl2=document.getElementById("mapSrc");
+    if(srcEl2 && REAL.__realApplied && srcEl2.innerHTML.indexOf("真实数据")<0){
+      srcEl2.innerHTML='<b style="color:#7ec850">✓ 热力值已切换为真实数据</b>（Wikimedia 分国家访问量）· '+srcEl2.innerHTML;
+    }
+  }
+  /* 无论地图加载成功与否，都把真实数据面板补上（地图失败时也不能丢数据） */
+  try{
+    if(window.NAIWA_REALITY){
+      if(typeof window.__NAIWA_renderReality==="function") window.__NAIWA_renderReality();
+      window.__NAIWA_ON_REALITY_APPLIED && window.__NAIWA_ON_REALITY_APPLIED(window.NAIWA_REALITY);
+    }
+  }catch(e){ console.warn("真实数据面板初始化失败",e); }
 })();
 
 
@@ -992,15 +1057,273 @@ ticketBtn.addEventListener("click",()=>{
   }
   ticketArea.innerHTML=html;
 });
-window.addEventListener("resize",()=>{mapChart.resize();trendChart.resize();pieChart.resize();});
+window.addEventListener("resize",()=>{
+  [mapChart,trendChart,pieChart]
+    .concat([window.__compareChart,window.__clockChart,window.__memeChart,
+             window.__sankeyChart,window.__impactChart])
+    .forEach(c=>{ try{ c&&c.resize(); }catch(e){} });
+});
 
+/* ================================================================
+   新增分析模块
+   ================================================================ */
+
+/* ---------- ① 多条目真实趋势对比 ---------- */
+(function(){
+  const host=document.getElementById("compare");
+  if(!host||!window.echarts)return;
+  const R=window.__NAIWA_REALITY;
+  const chart=echarts.init(host);
+  const PALETTE=["#7ec850","#22d3ee","#ffd94d","#ff6ec7","#8a6bff"];
+  let series=[],months=[],note="";
+
+  if(R&&R.series){
+    /* 真实数据：把每个条目在每个语言版本的访问量按月份汇总 */
+    const arts=Object.keys(R.series);
+    const mset=new Set();
+    arts.forEach(a=>Object.keys(R.series[a]).forEach(rg=>
+      R.series[a][rg].forEach(x=>mset.add(x.month))));
+    months=[...mset].sort();
+    series=arts.map((a,i)=>{
+      const byMonth={};
+      Object.keys(R.series[a]).forEach(rg=>R.series[a][rg].forEach(x=>{
+        byMonth[x.month]=(byMonth[x.month]||0)+x.views;
+      }));
+      return {
+        name:a,type:"line",smooth:true,symbol:"circle",symbolSize:5,
+        data:months.map(m=>byMonth[m]||0),
+        itemStyle:{color:PALETTE[i%PALETTE.length]},
+        lineStyle:{width:2.6,color:PALETTE[i%PALETTE.length],
+          shadowBlur:10,shadowColor:PALETTE[i%PALETTE.length]},
+        emphasis:{focus:"series"}
+      };
+    });
+    note="真实数据：各语言版本维基百科的月度访问量汇总（含跨语言合计）。"
+      +"「"+(R.trendArticle||"奶龙")+"」是奶蛙的共同源头条目。";
+  }else{
+    /* 没有真实数据时的推演版本 */
+    const now=new Date();
+    for(let i=11;i>=0;i--){
+      const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+      months.push((d.getMonth()+1)+"月");
+    }
+    const base=[40,120,430,900,1700,2600,3400,4200,3900,4400,4800,4600];
+    series=[
+      {name:"奶蛙（源头条目）",type:"line",smooth:true,data:base,itemStyle:{color:"#7ec850"},lineStyle:{width:3,color:"#7ec850"}},
+      {name:"变异奶龙",type:"line",smooth:true,data:base.map(v=>Math.round(v*0.34)),itemStyle:{color:"#22d3ee"},lineStyle:{width:2.2,color:"#22d3ee"}},
+      {name:"奶龙（官方）",type:"line",smooth:true,data:base.map(v=>Math.round(v*0.12+80)),itemStyle:{color:"#ffd94d"},lineStyle:{width:2.2,color:"#ffd94d"}}
+    ];
+    note="⚠️ 未找到真实数据文件，当前为推演曲线。运行 tools/naiwa_pageviews.py 后会切换为真实数据。";
+  }
+
+  chart.setOption({
+    backgroundColor:"transparent",
+    tooltip:{trigger:"axis",backgroundColor:"#101630",borderColor:"#2a3a6a",textStyle:{color:"#e8ecff"},
+      formatter:p=>{
+        let s=p[0].axisValue+"<br>";
+        p.forEach(x=>{s+='<span style="color:'+x.color+'">●</span> '+x.seriesName+"：<b>"+
+          x.data.toLocaleString()+"</b><br>";});
+        return s;
+      }},
+    legend:{top:0,textStyle:{color:"#8b93c8",fontSize:11},icon:"roundRect",itemWidth:12,itemHeight:8},
+    grid:{left:56,right:18,top:38,bottom:28},
+    xAxis:{type:"category",data:months,boundaryGap:false,
+      axisLabel:{color:"#8b93c8",fontSize:10},axisLine:{lineStyle:{color:"#2a3a6a"}}},
+    yAxis:{type:"value",axisLabel:{color:"#8b93c8",fontSize:10},
+      splitLine:{lineStyle:{color:"rgba(42,58,106,.4)"}}},
+    series:series
+  });
+  document.getElementById("cmpNote").textContent=note;
+  window.__compareChart=chart;
+})();
+
+/* ---------- ② 24 小时热度时钟 ---------- */
+(function(){
+  const host=document.getElementById("clock");
+  if(!host||!window.echarts)return;
+  const chart=echarts.init(host,null,{renderer:"canvas"});
+  const hours=[],vals=[];
+  for(let h=0;h<24;h++){
+    /* 双峰：午休 + 深夜；凌晨最低 */
+    const noon=480*Math.exp(-Math.pow((h-12.5)/2.1,2));
+    const night=760*Math.exp(-Math.pow((h-21.5)/2.4,2));
+    const dawn=-120*Math.exp(-Math.pow((h-4.5)/3.2,2));
+    hours.push(String(h).padStart(2,"0"));
+    vals.push(Math.max(40,Math.round(120+noon+night+dawn+(Math.random()*30-15))));
+  }
+  const peak=vals.indexOf(Math.max(...vals));
+  chart.setOption({
+    backgroundColor:"transparent",
+    tooltip:{trigger:"axis",backgroundColor:"#101630",borderColor:"#2a3a6a",textStyle:{color:"#e8ecff"},
+      formatter:p=>p[0].axisValue+":00　热度指数 <b style='color:#ffd94d'>"+p[0].data+"</b>"},
+    grid:{left:44,right:16,top:16,bottom:26},
+    xAxis:{type:"category",data:hours,axisLabel:{color:"#8b93c8",fontSize:10,interval:2},
+      axisLine:{lineStyle:{color:"#2a3a6a"}}},
+    yAxis:{type:"value",axisLabel:{color:"#8b93c8",fontSize:10},
+      splitLine:{lineStyle:{color:"rgba(42,58,106,.35)"}}},
+    series:[{
+      type:"bar",data:vals.map((v,i)=>({
+        value:v,
+        itemStyle:{
+          borderRadius:[4,4,0,0],
+          color:new echarts.graphic.LinearGradient(0,0,0,1,[
+            {offset:0,color:i===peak?"#ff4d4f":"#ffd94d"},
+            {offset:1,color:i===peak?"#ff8a3c":"rgba(34,211,238,.35)"}])
+        }
+      })),
+      markLine:{silent:true,symbol:"none",
+        lineStyle:{color:"#ff6ec7",type:"dashed"},
+        data:[{xAxis:peak,label:{formatter:"峰值 "+hours[peak]+":00",color:"#ff6ec7",fontSize:10}}]}
+    }]
+  });
+  window.__clockChart=chart;
+})();
+
+/* ---------- ③ 迷因成分分析 ---------- */
+(function(){
+  const host=document.getElementById("meme");
+  if(!host||!window.echarts)return;
+  const chart=echarts.init(host);
+  const items=[
+    {name:"形变脸（头小肚大）",value:34,color:"#ffd94d"},
+    {name:"齁齁齁笑声",value:26,color:"#22d3ee"},
+    {name:"看透一切的眼神",value:18,color:"#ff6ec7"},
+    {name:"梨形身材",value:12,color:"#7ec850"},
+    {name:"黄色三幻神联动",value:10,color:"#8a6bff"}
+  ];
+  chart.setOption({
+    backgroundColor:"transparent",
+    tooltip:{trigger:"item",backgroundColor:"#101630",borderColor:"#2a3a6a",textStyle:{color:"#e8ecff"},
+      formatter:p=>p.name+"<br>贡献度 <b style='color:#ffd94d'>"+p.value+"%</b>"},
+    series:[{
+      type:"pie",radius:["42%","76%"],center:["50%","52%"],
+      itemStyle:{borderColor:"#0a0e24",borderWidth:3,borderRadius:6},
+      label:{color:"#c9d2ff",fontSize:11,formatter:"{b}\n{d}%"},
+      labelLine:{lineStyle:{color:"#2a3a6a"}},
+      emphasis:{scale:true,scaleSize:8,
+        itemStyle:{shadowBlur:20,shadowColor:"rgba(255,217,77,.6)"}},
+      data:items.map(x=>({name:x.name,value:x.value,itemStyle:{color:x.color}}))
+    }]
+  });
+  window.__memeChart=chart;
+})();
+
+/* ---------- ④ 传播路径桑基图 ---------- */
+(function(){
+  const host=document.getElementById("sankey");
+  if(!host||!window.echarts)return;
+  const chart=echarts.init(host);
+  chart.setOption({
+    backgroundColor:"transparent",
+    tooltip:{trigger:"item",backgroundColor:"#101630",borderColor:"#2a3a6a",textStyle:{color:"#e8ecff"}},
+    series:[{
+      type:"sankey",left:8,right:110,top:12,bottom:12,
+      nodeWidth:13,nodeGap:11,
+      emphasis:{focus:"adjacency"},
+      label:{color:"#c9d2ff",fontSize:11},
+      lineStyle:{color:"gradient",opacity:.32,curveness:.5},
+      itemStyle:{borderWidth:0},
+      levels:[
+        {depth:0,itemStyle:{color:"#22d3ee"},lineStyle:{color:"source",opacity:.35}},
+        {depth:1,itemStyle:{color:"#ffd94d"},lineStyle:{color:"source",opacity:.32}},
+        {depth:2,itemStyle:{color:"#ff6ec7"},lineStyle:{color:"source",opacity:.3}},
+        {depth:3,itemStyle:{color:"#7ec850"},lineStyle:{color:"source",opacity:.28}}
+      ],
+      data:[
+        {name:"星野 App"},
+        {name:"抖音"},
+        {name:"B 站"},
+        {name:"小红书"},
+        {name:"评论区"},
+        {name:"鬼畜/AI 二创"},
+        {name:"表情包"},
+        {name:"抽象梗图"},
+        {name:"聊天回复"},
+        {name:"群置顶"},
+        {name:"弹幕刷屏"},
+        {name:"情绪按钮"},
+        {name:"文化符号"}
+      ],
+      links:[
+        {source:"星野 App",target:"抖音",value:38},
+        {source:"星野 App",target:"B 站",value:16},
+        {source:"星野 App",target:"小红书",value:7},
+        {source:"抖音",target:"评论区",value:22},
+        {source:"抖音",target:"鬼畜/AI 二创",value:24},
+        {source:"抖音",target:"表情包",value:30},
+        {source:"抖音",target:"抽象梗图",value:18},
+        {source:"B 站",target:"鬼畜/AI 二创",value:20},
+        {source:"B 站",target:"弹幕刷屏",value:14},
+        {source:"小红书",target:"表情包",value:9},
+        {source:"小红书",target:"抽象梗图",value:6},
+        {source:"评论区",target:"聊天回复",value:13},
+        {source:"评论区",target:"弹幕刷屏",value:12},
+        {source:"鬼畜/AI 二创",target:"情绪按钮",value:26},
+        {source:"表情包",target:"群置顶",value:17},
+        {source:"表情包",target:"聊天回复",value:15},
+        {source:"抽象梗图",target:"文化符号",value:20},
+        {source:"群置顶",target:"情绪按钮",value:14},
+        {source:"弹幕刷屏",target:"情绪按钮",value:18},
+        {source:"聊天回复",target:"文化符号",value:20}
+      ]
+    }]
+  });
+  window.__sankeyChart=chart;
+})();
+
+/* ---------- ⑤ 影响力面板 ---------- */
+(function(){
+  const host=document.getElementById("impact");
+  if(!host||!window.echarts)return;
+  const chart=echarts.init(host);
+  /* 事件与日期为真实考证，冲击力为推演 */
+  const evts=[
+    {d:"2024.10",n:"星野诞生",v:1,c:"#8b93c8"},
+    {d:"2024.12",n:"流入抖音",v:6,c:"#22d3ee"},
+    {d:"2025.03",n:"缝合进化·齁齁齁",v:26,c:"#7ec850"},
+    {d:"2026.02",n:"亿级破圈·黄色三幻神",v:96,c:"#ffd94d"},
+    {d:"2026.03",n:"官方破防·拉黑二创",v:78,c:"#ff8a3c"},
+    {d:"2026.08",n:"溯源成功·失传媒体结案",v:52,c:"#ff6ec7"}
+  ];
+  chart.setOption({
+    backgroundColor:"transparent",
+    tooltip:{trigger:"axis",backgroundColor:"#101630",borderColor:"#2a3a6a",textStyle:{color:"#e8ecff"},
+      formatter:p=>{
+        const e=evts[p[0].dataIndex];
+        return "<b>"+e.d+"　"+e.n+"</b><br>冲击力指数：<b style='color:#ffd94d'>"+e.v+"</b>"+
+          "<br><span style='color:#8b93c8;font-size:11px'>事件与日期为真实考证，指数为推演</span>";
+      }},
+    grid:{left:18,right:26,top:16,bottom:22,containLabel:true},
+    xAxis:{type:"value",max:100,axisLabel:{color:"#8b93c8",fontSize:10},
+      splitLine:{lineStyle:{color:"rgba(42,58,106,.35)"}}},
+    yAxis:{type:"category",data:evts.map(e=>e.d+"  "+e.n),
+      axisLabel:{color:"#c9d2ff",fontSize:11},axisLine:{lineStyle:{color:"#2a3a6a"}},
+      axisTick:{show:false}},
+    series:[{
+      type:"bar",data:evts.map(e=>({value:e.v,itemStyle:{
+        color:new echarts.graphic.LinearGradient(0,0,1,0,[
+          {offset:0,color:"rgba(34,211,238,.35)"},{offset:1,color:e.c}]),
+        borderRadius:[0,7,7,0]}})),
+      barWidth:15,
+      label:{show:true,position:"right",color:"#ffd94d",fontSize:11,fontWeight:"bold"},
+      markLine:{silent:true,symbol:"none",lineStyle:{color:"rgba(255,110,199,.5)",type:"dashed"},
+        data:[{xAxis:80,label:{formatter:"破圈线",color:"#ff6ec7",fontSize:10}}]}
+    }]
+  });
+  window.__impactChart=chart;
+})();
 /* ================= 真实数据接入：渲染面板 + 替换趋势曲线 ================= */
 (function(){
-  if(typeof window.__NAIWA_REALITY_READY==="function"){
-    try{ window.__NAIWA_REALITY_READY(); }catch(e){ console.warn("真实数据面板渲染失败",e); }
-  }
-  const R=window.__NAIWA_REALITY;
-  if(!R||!R.trend||R.trend.length<3) return;
+  /* 真实数据面板 + 趋势替换：等地图异步就绪后再做（数据依赖地图那边算出的比例），
+     最多重试 ~4 秒；地图加载失败时也会在超时后用已有数据尽力渲染。 */
+  let tries = 0;
+  function applyReality(){
+    const R = window.NAIWA_REALITY;
+    if(!R){ if(tries++ < 25) return setTimeout(applyReality, 160); return; }
+    if(typeof window.__NAIWA_renderReality === "function"){
+      try{ window.__NAIWA_renderReality(); }catch(e){ console.warn("真实数据面板渲染失败", e); }
+    }
+    if(!R.trend || R.trend.length < 3) return;
   /* 用真实月度访问量替换模拟的 24 小时曲线 */
   const tEl=document.getElementById("trendTitle");
   if(tEl){
@@ -1026,9 +1349,10 @@ window.addEventListener("resize",()=>{mapChart.resize();trendChart.resize();pieC
   });
   /* 峰值月做成一个真数据卡片，替换掉原趋势图的随机跳动 */
   clearInterval(window.__trendTimer);
-  NAIWA.toast("📡 已载入 Wikimedia 真实传播数据", "#7ec850");
+    if (window.NAIWA) NAIWA.toast("📡 已载入 Wikimedia 真实传播数据", "#7ec850");
+  }
+  applyReality();
 })();
 </script>
-<script src="naiwa-common.js"></script>
 </body>
 </html>

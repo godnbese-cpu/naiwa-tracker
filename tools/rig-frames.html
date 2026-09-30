@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>骨骼帧原始输出检查</title>
+<style>
+  body{margin:0;background:#060a1c;color:#e8ecff;font-family:Consolas,monospace;padding:10px}
+  h2{font-size:14px;color:#ffd94d;margin:8px 0}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .cell{background:#0e1330;border:1px solid #26305c;border-radius:8px;padding:4px;text-align:center}
+  .cell canvas{display:block;background:#0a0e24}
+  .cell .n{font-size:10px;color:#8b93c8;margin-top:2px}
+  #info{font-size:12px;color:#7ec850;white-space:pre-wrap;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div id="info">加载中…</div>
+
+<h2>① Rig.frame 输出（128，无发光）— 直接放大到 128x128 显示</h2>
+<div class="row" id="r1"></div>
+
+<h2>② Rig.frame 输出（128，带发光 glow）</h2>
+<div class="row" id="r2"></div>
+
+<h2>③ 裁剪后的实际像素范围统计</h2>
+<div id="info2" style="color:#22d3ee"></div>
+
+<script src="../naiwa-common.js"></script>
+<script src="../assets/fighters.js"></script>
+<script src="../assets/frog-rig.js"></script>
+<script>
+(function(){
+  var F = NAIWA.FIGHTERS, Rig = NAIWA.Rig;
+  var f = F.byId("big");
+  var clips = ["idle","punch1","strike","kick","guard","hurt"];
+  var lines = [], lines2 = [];
+
+  function bbox(cv){
+    var c = document.createElement("canvas"); c.width=cv.width; c.height=cv.height;
+    var x = c.getContext("2d"); x.drawImage(cv,0,0);
+    var d = x.getImageData(0,0,cv.width,cv.height).data;
+    var minX=1e9,maxX=-1,minY=1e9,maxY=-1,n=0;
+    for(var i=0;i<d.length;i+=4){ if(d[i+3]>8){ n++; var p=i/4, px=p%cv.width, py=(p/cv.width)|0;
+      if(px<minX)minX=px; if(px>maxX)maxX=px; if(py<minY)minY=py; if(py>maxY)maxY=py; } }
+    return {n:n, x:minX, X:maxX, y:minY, Y:maxY, w:cv.width, h:cv.height};
+  }
+
+  function row(host, glow){
+    clips.forEach(function(cl){
+      var cv = Rig.frame(f, cl, 0, 128, glow?{glow:true}:{});
+      var box = bbox(cv);
+      var d = document.createElement("div"); d.className="cell";
+      var showed = document.createElement("canvas");
+      showed.width = 128; showed.height = 128;
+      showed.getContext("2d").drawImage(cv, 0, 0, 128, 128);
+      showed.style.width="128px"; showed.style.height="128px";
+      d.appendChild(showed);
+      var n = document.createElement("div"); n.className="n";
+      n.textContent = cl + " 非透明" + box.n;
+      d.appendChild(n);
+      host.appendChild(d);
+      lines2.push(cl + " canvas=" + box.w + "x" + box.h +
+        " 内容 x[" + box.x + "," + box.X + "] y[" + box.y + "," + box.Y + "] 像素=" + box.n);
+    });
+  }
+  row(document.getElementById("r1"), false);
+  row(document.getElementById("r2"), true);
+
+  document.getElementById("info").textContent =
+    "NAIWA.Rig 已加载=" + !!NAIWA.Rig + "  斗士=" + F.list.length +
+    "  big 体型=" + JSON.stringify(Rig.BODY.big);
+  document.getElementById("info2").textContent = lines2.join("\n");
+})();
+</script>
+</body>
+</html>

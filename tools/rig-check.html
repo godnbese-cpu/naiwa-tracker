@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>骨骼动画检查 · 奶蛙斗士</title>
+<style>
+  body{margin:0;background:#0a0e24;color:#e8ecff;font-family:Consolas,"Microsoft YaHei",monospace;padding:14px}
+  h2{font-size:15px;color:#ffd94d;margin:6px 0 10px;letter-spacing:1px}
+  .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  .cell{background:#111634;border:1px solid #26305c;border-radius:10px;padding:6px;text-align:center}
+  .cell canvas{width:100%;height:auto;display:block;background:linear-gradient(#0d1230,#080b1f);border-radius:6px}
+  .cell .nm{font-size:10.5px;color:#9aa3d0;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cell .k{font-size:9.5px;color:#5f6a9c}
+  .row{margin-bottom:14px}
+  #err{color:#ff5a5a;font-size:12px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div id="err"></div>
+<div class="row">
+  <h2>① 12 位斗士 · 待机姿势（骨骼 idle）</h2>
+  <div class="grid" id="g1"></div>
+</div>
+<div class="row">
+  <h2>② 动作表 · 大奶蛙（同一角色的真实关节动作，不是贴图平移）</h2>
+  <div class="grid" id="g2"></div>
+</div>
+<div class="row">
+  <h2>③ 动作表 · 影忍奶蛙（忍者面罩/手里剑）与 武侍奶蛙（katana）</h2>
+  <div class="grid" id="g3"></div>
+</div>
+<script src="../naiwa-common.js"></script>
+<script src="../assets/fighters.js"></script>
+<script src="../assets/frog-rig.js"></script>
+<script>
+try{
+  const F = NAIWA.FIGHTERS, Rig = NAIWA.Rig;
+  const CLIPS = ["idle","walk","run","jump","crouch","guard","charge","punch1","punch2","uppercut","heavy","kick","sweep","strike","cast","dash","air","hurt","ko","dead","win"];
+
+  function cell(host, cv, name, key){
+    const d=document.createElement("div"); d.className="cell";
+    d.appendChild(cv);
+    const n=document.createElement("div"); n.className="nm"; n.textContent=name;
+    const k=document.createElement("div"); k.className="k"; k.textContent=key||"";
+    d.appendChild(n); d.appendChild(k);
+    host.appendChild(d);
+  }
+
+  /* ① 12 位斗士待机 */
+  const g1=document.getElementById("g1");
+  F.list.forEach(f=>{
+    const src = Rig.frame(f,"idle",0.25,180);
+    const cv=document.createElement("canvas"); cv.width=180; cv.height=180;
+    cv.getContext("2d").drawImage(src,0,0);
+    cell(g1,cv,f.emoji+" "+f.name,f.color);
+  });
+
+  /* ②③ 动作表 */
+  function actionRow(host, fid){
+    const f=F.byId(fid);
+    CLIPS.forEach(c=>{
+      const src=Rig.frame(f,c,c==="walk"||c==="run"||c==="idle"?0.3:0,150);
+      const cv=document.createElement("canvas"); cv.width=150; cv.height=150;
+      cv.getContext("2d").drawImage(src,0,0);
+      cell(host,cv,c,Rig.CLIPS[c]?"":"");
+    });
+  }
+  actionRow(document.getElementById("g2"),"big");
+  actionRow(document.getElementById("g3"),"ninja");
+}catch(e){
+  document.getElementById("err").textContent="❌ 渲染出错：\n"+(e&&e.stack||e);
+}
+</script>
+</body>
+</html>
