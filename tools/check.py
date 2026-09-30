@@ -118,7 +118,7 @@ def main():
     # 4) 关键资源
     print("📦 关键资源")
     for f in ["naiwa.webp", "naiwa-standing.webp", "naiwa-smiling.webp", "naiwa-thinking.webp",
-              "naiwa-common.js", "assets/fighters.js", "echarts.min.js", "world.json",
+              "naiwa-common.js", "assets/fighters.js", "assets/naiwa-charts.js", "assets/frog-rig.js", "world.json",
               "README.md", "DEPLOY.md", ".gitignore", ".github/workflows/pages.yml",
               "tools/naiwa_crawler.py", "tools/naiwa_data.py", "404.html"]:
         p = os.path.join(ROOT, f.replace("/", os.sep))
@@ -139,3 +139,4 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+

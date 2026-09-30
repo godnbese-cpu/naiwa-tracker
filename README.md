@@ -206,7 +206,7 @@ naiwa-tracker/
 ├── .github/workflows/pages.yml
 ├── DEPLOY.md
 ├── package.json               npm scripts 别名（可选）
-├── echarts.min.js             本地 ECharts（无网络也能画图）
+├── assets/naiwa-charts.js      自写轻量图表引擎（32KB，替代 1MB 的 ECharts）
 ├── world.json                 地图 GeoJSON
 └── naiwa*.webp                奶蛙原图（站立/大笑/思考/主图）
 ```

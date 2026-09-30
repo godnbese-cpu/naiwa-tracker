@@ -53,7 +53,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 需要发布的文件/目录（白名单思路：只发布站点真正需要的东西）
 INCLUDE_FILES = [
     "index.html", "battle.html", "race.html", "shop.html", "lab.html", "404.html",
-    "naiwa-common.js", "echarts.min.js", "world.json",
+    "naiwa-common.js", "world.json",
     "naiwa.webp", "naiwa-standing.webp", "naiwa-smiling.webp", "naiwa-thinking.webp",
     "README.md", ".nojekyll",
 ]
@@ -247,3 +247,4 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+

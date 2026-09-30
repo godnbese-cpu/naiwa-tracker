@@ -126,4 +126,4 @@ A：Pages 对仓库名大小写敏感，确认所有资源都是**相对路径**
 A：等 1 分钟；或去 Actions 看构建是否失败；再强制刷新浏览器（Ctrl+F5）。
 
 **Q：ECharts 图表不显示**
-A：`index.html` 会优先用仓库自带的 `echarts.min.js`，没有才走 CDN。确认这个文件在根目录。
+A：图表用项目自写的 `assets/naiwa-charts.js`，不依赖任何外部库。如果图表不显示，确认这个文件存在。
