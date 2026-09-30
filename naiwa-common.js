@@ -141,6 +141,75 @@
   }
 
   /**
+   * 抠掉纯色背景：奶蛙原图是白底且**没有 alpha 通道**，
+   * 直接贴到深色擂台上会显成一个白方块。
+   *
+   * 做法：从四条边框向内做「洪水填充」，只把**与图像边缘连通的**浅色像素变透明。
+   * 这样能保留角色内部的浅色区域（比如奶蛙肚子上的亮斑），
+   * 比「凡白色就透明」稳得多。
+   *
+   * @param {Image} im 已加载的原图
+   * @returns {HTMLCanvasElement} 带 alpha 的抠图结果（原始尺寸）
+   */
+  function keyOutImage(im) {
+    var w = im.width, h = im.height;
+    var cv = document.createElement("canvas");
+    cv.width = w; cv.height = h;
+    var ctx = cv.getContext("2d");
+    ctx.drawImage(im, 0, 0);
+    var img;
+    try { img = ctx.getImageData(0, 0, w, h); } catch (e) { return cv; }
+    var d = img.data;
+
+    /* 背景判定：接近白/灰。阈值要放宽一点——奶蛙原图的"白底"其实带轻微灰阶
+       （实测约 236,235,237），卡太严会漏掉一大片背景，残留下矩形底色。 */
+    function isBg(i) {
+      var r = d[i], g = d[i + 1], b = d[i + 2];
+      var mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      return mx >= 230 && (mx - mn) <= 20;
+    }
+
+    var mask = new Uint8Array(w * h);
+    var stack = [];
+    var x, y;
+    for (x = 0; x < w; x++) { stack.push(x, 0, x, h - 1); }
+    for (y = 0; y < h; y++) { stack.push(0, y, w - 1, y); }
+    while (stack.length) {
+      var py = stack.pop(), px = stack.pop();
+      if (px < 0 || py < 0 || px >= w || py >= h) continue;
+      var p = py * w + px;
+      if (mask[p] || !isBg(p * 4)) continue;
+      mask[p] = 1;
+      stack.push(px + 1, py, px - 1, py, px, py + 1, px, py - 1);
+    }
+
+    /* 边缘羽化：轮廓不生硬 */
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) {
+        var q = y * w + x;
+        if (mask[q]) { d[q * 4 + 3] = 0; continue; }
+        var near = 0;
+        if (x > 0 && mask[q - 1]) near++;
+        if (x < w - 1 && mask[q + 1]) near++;
+        if (y > 0 && mask[q - w]) near++;
+        if (y < h - 1 && mask[q + w]) near++;
+        if (near && isBg(q * 4)) d[q * 4 + 3] = 90;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return cv;
+  }
+  NAIWA.keyOutImage = keyOutImage;
+  var _keyCache = {};
+  function keyedSource(src) {
+    if (_keyCache[src]) return _keyCache[src];
+    var im = imgCache[src] && imgCache[src]._img;
+    if (!im || !im.width) return null;
+    _keyCache[src] = keyOutImage(im);
+    return _keyCache[src];
+  }
+
+  /**
    * 生成奶蛙换色精灵（同步；需先 await NAIWA.preloadFrogs()）
    * @param {string} src 源图路径
    * @param {string} hex 叠加色
@@ -150,7 +219,7 @@
   NAIWA.tintSprite = function (src, hex, opt) {
     opt = opt || {};
     var size = opt.size || 256;
-    var key = [src, hex || "", opt.hue || 0, opt.alpha, opt.blend || "multiply", opt.stroke || "", size].join("|");
+    var key = [src, hex || "", opt.hue || 0, opt.alpha, opt.blend || "multiply", opt.stroke || "", size, opt.keyOut ? 1 : 0].join("|");
     if (_spriteCache[key]) return _spriteCache[key];
 
     var cv = document.createElement("canvas");
@@ -172,28 +241,34 @@
       return cv;
     }
 
-    /* 1. 基础绘制（可带色相滤镜） */
     /* 1. 基础绘制（必须保持原始宽高比，否则角色会被压扁变形）
        ⚠️ 奶蛙原图尺寸并不统一：standing 366×480、smiling 448×480、
        thinking 720×709、主图 474×474。直接 drawImage(im,0,0,size,size)
-       会把竖长的图硬压成正方形，角色就被压扁、看起来像一块方块。 */
-    var fit = fitBox(im.width, im.height, size);
+       会把竖长的图硬压成正方形，角色就被压扁、看起来像一块方块。
+       opt.keyOut 为真时先用洪水填充抠掉白底（原图没有 alpha 通道）。 */
+    var source = im, srcW = im.width, srcH = im.height;
+    if (opt.keyOut) {
+      var ko = keyedSource(src);
+      if (ko) { source = ko; srcW = ko.width; srcH = ko.height; }
+    }
+    var fit = fitBox(srcW, srcH, size);
     if (opt.hue || opt.sat) {
       try {
         ctx.filter = "hue-rotate(" + (opt.hue || 0) + "deg) saturate(" + (opt.sat || 1) + ")";
       } catch (e) { }
     }
-    ctx.drawImage(im, fit.x, fit.y, fit.w, fit.h);
+    ctx.drawImage(source, fit.x, fit.y, fit.w, fit.h);
     ctx.filter = "none";
 
-    /* 2. 颜色叠加，只作用于已有像素 */
+    /* 2. 颜色叠加，只作用于已有像素
+       ⚠️ 第二次提亮也必须用 source-atop：曾经用过 overlay，
+       结果它把「已经被抠成透明」的白底又重新上色，角色周围浮出一个矩形色块。 */
     if (hex) {
       ctx.globalCompositeOperation = "source-atop";
       ctx.globalAlpha = opt.alpha === undefined ? 0.72 : opt.alpha;
       ctx.fillStyle = hex;
       ctx.fillRect(0, 0, size, size);
       if ((opt.blend || "multiply") === "multiply") {
-        ctx.globalCompositeOperation = "overlay";
         ctx.globalAlpha = 0.3;
         ctx.fillRect(0, 0, size, size);
       }
@@ -210,7 +285,7 @@
       var hf = fitBox(im.width, im.height, size);
       for (var a = 0; a < 12; a++) {
         var ang = a / 12 * Math.PI * 2;
-        hc.drawImage(im, hf.x + Math.cos(ang) * 3, hf.y + Math.sin(ang) * 3, hf.w, hf.h);
+        hc.drawImage(source, hf.x + Math.cos(ang) * 3, hf.y + Math.sin(ang) * 3, hf.w, hf.h);
       }
       hc.globalCompositeOperation = "source-in";
       hc.fillStyle = opt.stroke;
