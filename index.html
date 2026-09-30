@@ -5,7 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>奶蛙诞生庆典 · 全网观测站</title>
 <link rel="icon" href="naiwa.webp">
-<script src="echarts.min.js"></script>
+<!-- 图表引擎：用自写的轻量引擎（32 KB），替换原来 1005 KB 的 echarts.min.js。
+     国内链路抖动时，1 MB 的库很容易断在半路，这是"打不开"的直接原因。
+     下面的兼容层把 `echarts` 这个名字指过去，页面代码无需改动。 -->
+<script src="assets/naiwa-charts.js"></script>
+<script>
+(function(){
+  if (window.echarts) return;                 // 如果将来又放回 echarts，优先用它
+  var NC = window.NAIWA && window.NAIWA.charts;
+  if (!NC) { console.warn("轻量图表引擎未加载"); return; }
+  window.echarts = {
+    init: function(el, theme, opts){ return NC.init(el, theme, opts); },
+    registerMap: function(name, geo){ return NC.registerMap(name, geo); },
+    graphic: NC.graphic,
+    dispose: NC.dispose
+  };
+})();
+</script>
 <!-- 真实传播数据（构建期抓取后落成本地文件，浏览器不请求任何外部 API） -->
 <script src="assets/naiwa-data/naiwa-countries.js" onerror="window.__noCountries=1"></script>
 <script src="assets/naiwa-data/naiwa-reality.js" onerror="window.__noReality=1"></script>
@@ -174,7 +190,7 @@
   .cmp-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-bottom:10px}
   .cmp-legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
   #compare{height:260px;width:100%}
-  #clock{height:250px;width:100%}
+  #clockChart{height:250px;width:100%}
   #meme{height:270px;width:100%}
   #sankey{height:300px;width:100%}
   #impact{height:280px;width:100%}
@@ -347,7 +363,7 @@
     <!-- 24 小时热度时钟 -->
     <div class="card">
       <h2>🕐 24 小时热度时钟 <span class="tag sim">推演 · 按平台活跃时段建模</span></h2>
-      <div id="clock"></div>
+      <div id="clockChart"></div>
       <div class="mini-note">按抖音 / B 站 / 小红书的用户活跃时段加权：晚间 20-23 点是奶蛙梗图的爆发窗口，凌晨 3-6 点跌到谷底。</div>
     </div>
     <!-- 迷因成分 -->
@@ -1245,7 +1261,9 @@ window.addEventListener("resize",()=>{
 
 /* ---------- ② 24 小时热度时钟 ---------- */
 (function(){
-  const host=document.getElementById("clock");
+  /* ⚠️ 容器 id 必须是 clockChart：页面里已经有一个 id="clock" 的北京时间数字，
+     getElementById 只返回第一个，重名会导致图表画到错误的地方。 */
+  const host=document.getElementById("clockChart");
   if(!host||!window.echarts)return;
   const chart=echarts.init(host,null,{renderer:"canvas"});
   const hours=[],vals=[];
