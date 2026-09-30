@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>奶蛙观测站 · 全网使用频率实时统计</title>
+<link rel="icon" href="naiwa.webp">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  :root{
+    --bg:#fff8ec; --panel:#ffffff; --ink:#3a2e1a; --muted:#8a7a5c;
+    --frog1:#ffd94d; --frog2:#f5b800; --frog3:#7ec850; --accent:#e8853d;
+    --shadow:0 8px 28px rgba(180,140,40,.14);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #fff2c9 0%, transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, #eaf7dd 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    min-height:100vh; overflow-x:hidden;
+  }
+  /* ===== 漂浮背景奶蛙 ===== */
+  .float-frog{position:fixed;pointer-events:none;opacity:.13;z-index:0;animation:floaty linear infinite}
+  @keyframes floaty{
+    0%{transform:translateY(0) rotate(0deg)}
+    50%{transform:translateY(-40px) rotate(8deg)}
+    100%{transform:translateY(0) rotate(0deg)}
+  }
+  header{position:relative;z-index:2;text-align:center;padding:34px 16px 10px}
+  .logo-frog{
+    width:110px;height:110px;border-radius:50%;object-fit:cover;
+    border:4px solid var(--frog1);box-shadow:0 0 0 8px #fff3c4, var(--shadow);
+    animation:think 3.2s ease-in-out infinite;
+  }
+  @keyframes think{
+    0%,100%{transform:rotate(-3deg) translateY(0)}
+    50%{transform:rotate(3deg) translateY(-6px)}
+  }
+  h1{
+    font-size:clamp(26px,4.5vw,42px);margin-top:14px;letter-spacing:2px;
+    background:linear-gradient(90deg,var(--frog2),var(--accent),var(--frog3));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .subtitle{color:var(--muted);margin-top:6px;font-size:14px}
+  .live-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff5252;margin-right:6px;animation:blink 1.2s infinite;vertical-align:1px}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+  /* ===== 快捷导航 ===== */
+  nav{
+    position:sticky;top:0;z-index:50;background:rgba(255,248,236,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid #f0e4c0;margin-top:16px;
+  }
+  nav .inner{max-width:1280px;margin:0 auto;display:flex;gap:6px;padding:10px 20px;overflow-x:auto;scrollbar-width:none}
+  nav a{
+    text-decoration:none;color:var(--ink);font-size:13px;padding:6px 14px;border-radius:20px;
+    white-space:nowrap;transition:all .25s;
+  }
+  nav a:hover{background:var(--frog1);color:#5c4300;transform:translateY(-2px)}
+
+  .wrap{position:relative;z-index:2;max-width:1280px;margin:0 auto;padding:18px 20px 60px}
+
+  /* ===== 数据大屏卡片 ===== */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:22px 0}
+  .stat{
+    background:var(--panel);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);
+    border:1px solid #f4e8c8;position:relative;overflow:hidden;transition:transform .25s;
+  }
+  .stat:hover{transform:translateY(-4px)}
+  .stat::after{content:"";position:absolute;right:-20px;top:-20px;width:80px;height:80px;background:radial-gradient(circle,var(--frog1) 0%,transparent 70%);opacity:.35;border-radius:50%}
+  .stat .num{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--frog2);letter-spacing:1px}
+  .stat .label{color:var(--muted);font-size:13px;margin-top:4px}
+  .stat .trend{font-size:12px;margin-top:6px}
+  .up{color:#e0533d}.down{color:#3da45c}
+
+  .grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:900px){.grid,.grid-2{grid-template-columns:1fr}}
+  .card{
+    background:var(--panel);border-radius:18px;box-shadow:var(--shadow);
+    border:1px solid #f4e8c8;padding:18px;margin-bottom:16px;
+  }
+  .card h2{font-size:17px;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card h2 .tag{font-size:11px;background:#fff3c4;color:#a07818;border-radius:20px;padding:2px 10px;font-weight:normal}
+  #map{height:480px;width:100%}
+  #trend{height:260px;width:100%}
+  #pie{height:300px;width:100%}
+
+  /* ===== 实时数据流 ===== */
+  .feed{height:480px;overflow:hidden;position:relative}
+  .feed ul{list-style:none}
+  .feed li{padding:9px 12px;border-radius:12px;margin-bottom:8px;background:#fdf6e3;border-left:4px solid var(--frog3);font-size:13px;animation:slideIn .5s ease both}
+  .feed li .ip{font-family:Consolas,monospace;color:var(--accent);font-weight:700}
+  .feed li .time{float:right;color:#b7a97f;font-size:11px}
+  .feed li .act{display:block;color:var(--muted);margin-top:2px}
+  @keyframes slideIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+
+  .rank{margin-top:4px}
+  .rank .row{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:13px}
+  .rank .row .name{width:92px;flex-shrink:0;white-space:nowrap}
+  .rank .bar-bg{flex:1;height:14px;background:#f7eed5;border-radius:8px;overflow:hidden}
+  .rank .bar{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--frog1),var(--frog2));transition:width .8s ease}
+  .rank .row .val{width:64px;text-align:right;color:var(--frog2);font-weight:700;font-variant-numeric:tabular-nums}
+
+  /* ===== 历史脉络时间轴 ===== */
+  .timeline{position:relative;padding:10px 0 0 26px}
+  .timeline::before{
+    content:"";position:absolute;left:8px;top:14px;bottom:10px;width:4px;border-radius:2px;
+    background:linear-gradient(180deg,var(--frog1),var(--frog3),var(--accent));
+  }
+  .era{
+    position:relative;margin-bottom:26px;background:#fffdf4;border:1px solid #f0e4c0;
+    border-radius:16px;padding:16px 18px;box-shadow:0 4px 16px rgba(180,140,40,.08);
+    opacity:0;transform:translateY(30px);transition:all .7s cubic-bezier(.2,.7,.3,1);
+  }
+  .era.show{opacity:1;transform:none}
+  .era:hover{transform:translateX(6px);box-shadow:var(--shadow)}
+  .era::before{
+    content:"";position:absolute;left:-24px;top:22px;width:16px;height:16px;border-radius:50%;
+    background:var(--frog1);border:4px solid #fff;box-shadow:0 0 0 3px var(--frog2);
+  }
+  .era .era-title{font-size:16px;font-weight:800;margin-bottom:6px}
+  .era .era-title .date{font-size:12px;color:var(--accent);font-weight:700;margin-right:8px}
+  .era p{font-size:13.5px;line-height:1.8;color:#6b5d40}
+
+  /* ===== 砸箱子模块 ===== */
+  .case-stage{text-align:center;padding:26px 10px 10px;min-height:380px}
+  .case-box{
+    width:150px;height:120px;margin:0 auto 22px;position:relative;cursor:pointer;
+    filter:drop-shadow(0 12px 20px rgba(180,140,40,.3));
+    transition:transform .3s;
+  }
+  .case-box:hover{transform:scale(1.06)}
+  .case-box.shake{animation:boxshake .12s linear infinite}
+  @keyframes boxshake{
+    0%{transform:translate(0,0) rotate(0)}
+    25%{transform:translate(-5px,2px) rotate(-3deg)}
+    50%{transform:translate(5px,-2px) rotate(3deg)}
+    75%{transform:translate(-4px,-3px) rotate(-2deg)}
+    100%{transform:translate(0,0) rotate(0)}
+  }
+  .case-box.burst{animation:burst .55s ease forwards}
+  @keyframes burst{
+    0%{transform:scale(1)}
+    40%{transform:scale(1.25)}
+    100%{transform:scale(0);opacity:0}
+  }
+  .frog-hammer{
+    position:absolute;top:-70px;left:50%;width:64px;margin-left:-32px;opacity:0;
+  }
+  .frog-hammer.swing{animation:hammer .5s ease forwards}
+  @keyframes hammer{
+    0%{opacity:1;transform:rotate(-80deg);transform-origin:bottom center}
+    50%{opacity:1;transform:rotate(15deg)}
+    100%{opacity:0;transform:rotate(-80deg)}
+  }
+  .btn{
+    display:inline-block;border:none;cursor:pointer;font-size:15px;font-weight:700;
+    padding:12px 34px;border-radius:30px;color:#5c4300;
+    background:linear-gradient(135deg,var(--frog1),var(--frog2));
+    box-shadow:0 6px 18px rgba(245,184,0,.4);
+    transition:all .25s;font-family:inherit;
+  }
+  .btn:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(245,184,0,.55)}
+  .btn:active{transform:translateY(0)}
+  .btn:disabled{opacity:.5;cursor:wait;transform:none}
+  .prize{
+    margin:18px auto 0;max-width:340px;border-radius:16px;padding:20px;
+    opacity:0;transform:scale(.5) rotate(-6deg);transition:all .6s cubic-bezier(.2,1.4,.4,1);
+  }
+  .prize.show{opacity:1;transform:scale(1) rotate(0)}
+  .prize .rarity{font-size:11px;letter-spacing:3px;font-weight:800;border-radius:20px;display:inline-block;padding:3px 12px;margin-bottom:10px;color:#fff}
+  .prize .prize-name{font-size:19px;font-weight:800}
+  .prize .prize-desc{font-size:12.5px;color:#7a6b4c;margin-top:6px;line-height:1.7}
+  .r-common{background:#fdf6e3;border:2px dashed #d9c896}.r-common .rarity{background:#b3a06c}
+  .r-rare{background:#eef5ff;border:2px solid #9ec1f0}.r-rare .rarity{background:#5a8fd6}
+  .r-epic{background:#f6efff;border:2px solid #c8a8f0}.r-epic .rarity{background:#8a55c9}
+  .r-legend{background:#fff8e0;border:2px solid #f0c040;box-shadow:0 0 30px rgba(240,192,64,.55);animation:legendGlow 1.6s ease-in-out infinite}
+  .r-legend .rarity{background:linear-gradient(90deg,#e8a80c,#f5c542)}
+  @keyframes legendGlow{0%,100%{box-shadow:0 0 20px rgba(240,192,64,.4)}50%{box-shadow:0 0 44px rgba(240,192,64,.85)}}
+  .r-hidden{background:linear-gradient(135deg,#fff0f5,#f0fff8,#f0f4ff,#fffdf0);background-size:300% 300%;border:2px solid transparent;animation:hiddenRain 3s linear infinite}
+  @keyframes hiddenRain{0%{background-position:0% 50%}100%{background-position:300% 50%}}
+  .r-hidden .rarity{background:linear-gradient(90deg,#e0533d,#f5a623,#7ec850,#5a8fd6)}
+
+  /* ===== 送票模块 ===== */
+  .ticket-stage{text-align:center;padding:26px 10px 10px;min-height:380px}
+  .ticket{max-width:380px;margin:0 auto;position:relative;text-align:left}
+  .air-ticket{
+    background:linear-gradient(135deg,#2d3e5e,#4a6fa5);color:#fff;border-radius:16px;
+    padding:0;overflow:hidden;box-shadow:0 14px 34px rgba(45,62,94,.35);
+    transform:translateX(60px) rotate(4deg);opacity:0;transition:all .8s cubic-bezier(.2,.9,.3,1);
+  }
+  .air-ticket.show{transform:none;opacity:1}
+  .train-ticket{
+    background:linear-gradient(135deg,#c8352c,#e05a45);color:#fff;border-radius:16px;
+    overflow:hidden;box-shadow:0 14px 34px rgba(200,53,44,.35);
+    transform:translateX(-60px) rotate(-4deg);opacity:0;transition:all .8s cubic-bezier(.2,.9,.3,1);
+  }
+  .train-ticket.show{transform:none;opacity:1}
+  .ticket-head{padding:14px 20px 10px;display:flex;justify-content:space-between;align-items:center}
+  .ticket-head .t-type{font-size:13px;letter-spacing:3px;font-weight:800;background:rgba(255,255,255,.2);padding:3px 12px;border-radius:8px}
+  .ticket-body{padding:2px 20px 18px}
+  .route{display:flex;align-items:center;gap:14px;margin:8px 0}
+  .route .city{font-size:26px;font-weight:800;letter-spacing:1px}
+  .route .arrow{flex:1;position:relative;height:2px;background:rgba(255,255,255,.5)}
+  .route .arrow::before{content:"✈";position:absolute;left:50%;top:-9px;transform:translateX(-50%);font-size:15px}
+  .train-ticket .route .arrow::before{content:"🚄"}
+  .t-row{display:flex;justify-content:space-between;font-size:12px;margin-top:7px;opacity:.92}
+  .t-row b{font-weight:700}
+  .ticket-teeth{height:12px;background-image:radial-gradient(circle at 8px 0,transparent 6px,rgba(255,255,255,.25) 6px);background-size:16px 12px}
+  .ticket-foot{padding:10px 20px;background:rgba(0,0,0,.15);font-size:11px;text-align:center;line-height:1.7}
+  .ticket-hint{margin-top:14px;font-size:12px;color:var(--muted)}
+  .frog-jump{width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:14px;animation:hop .8s ease infinite}
+  @keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px) scaleX(1.06)}}
+
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:26px 10px 40px;line-height:1.9}
+  .disclaimer{background:#fff3c4;border-radius:12px;display:inline-block;padding:8px 18px}
+</style>
+</head>
+<body>
+<!-- 背景漂浮蛙 -->
+<img class="float-frog" src="naiwa.webp" style="width:150px;top:12%;left:4%;animation-duration:9s" alt="">
+<img class="float-frog" src="naiwa.webp" style="width:90px;top:60%;left:12%;animation-duration:12s" alt="">
+<img class="float-frog" src="naiwa.webp" style="width:120px;top:20%;right:5%;animation-duration:10s" alt="">
+<img class="float-frog" src="naiwa.webp" style="width:70px;top:72%;right:10%;animation-duration:14s" alt="">
+
+<header>
+  <img class="logo-frog" src="naiwa.webp" alt="奶蛙">
+  <h1>🐸 奶蛙全网使用频率观测站</h1>
+  <div class="subtitle"><span class="live-dot"></span>实时监测 · 思考蛙形象全网出现频次统计 · 数据每 2 秒刷新</div>
+</header>
+
+<nav><div class="inner">
+  <a href="#live">📊 实时观测</a>
+  <a href="#mapsec">🌍 全球热力图</a>
+  <a href="#history">📜 奶蛙历史脉络</a>
+  <a href="#case">🎁 奶蛙砸箱子</a>
+  <a href="#ticket">🎫 奶蛙送票</a>
+</div></nav>
+
+<div class="wrap">
+
+  <!-- ================= 实时观测 ================= -->
+  <div class="stats" id="live">
+    <div class="stat"><div class="num" id="total">0</div><div class="label">全网今日累计使用次数</div><div class="trend up">▲ +12.4%</div></div>
+    <div class="stat"><div class="num" id="rate">0</div><div class="label">当前频率（次 / 秒）</div><div class="trend up">▲ 持续攀升中</div></div>
+    <div class="stat"><div class="num" id="ips">0</div><div class="label">今日独立 IP 数</div><div class="trend up">▲ +8.1%</div></div>
+    <div class="stat"><div class="num" id="peak">0</div><div class="label">今日峰值时段频率</div><div class="trend down" id="peakTime">—</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card" id="mapsec">
+      <h2>🌍 全球使用热力图与传播连线 <span class="tag">按国家 / 地区 IP 频次 · 滚轮缩放 · 飞线为奶蛙文化传播路径</span></h2>
+      <div id="map"></div>
+    </div>
+    <div class="card">
+      <h2>📡 实时使用数据流 <span class="tag">模拟采样</span></h2>
+      <div class="feed"><ul id="feed"></ul></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>📈 24 小时使用频率趋势</h2>
+      <div id="trend"></div>
+    </div>
+    <div class="card">
+      <h2>🥧 使用场景分布</h2>
+      <div id="pie"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🏆 全球国家 / 地区使用频率排行榜</h2>
+    <div class="rank" id="rank"></div>
+  </div>
+
+  <!-- ================= 历史脉络 ================= -->
+  <div class="card" id="history">
+    <h2>📜 奶蛙历史脉络 · 编年长卷 <span class="tag">民间演绎版 · 滚动翻开</span></h2>
+    <div class="timeline">
+      <div class="era">
+        <div class="era-title"><span class="date">太古纪元</span>🥚 一只青蛙的沉思</div>
+        <p>在互联网某个无人知晓的角落，一只通体奶黄的青蛙把下巴搁在手上，陷入了漫长的思考。没有人知道它在想什么——这成了互联网最伟大的谜题之一。</p>
+      </div>
+      <div class="era">
+        <div class="era-title"><span class="date">表情包纪元</span>💬 "让我想想"的诞生</div>
+        <p>某位匿名网友为这张沉思照配上了第一句台词："让我想想"。自此，青蛙的沉思不再是它自己的沉思，而成了所有拖延症患者的共同面具。</p>
+      </div>
+      <div class="era">
+        <div class="era-title"><span class="date">奶化纪元</span>🧬 "奶蛙"得名</div>
+        <p>形象传入中文互联网。因其通体奶黄、圆润软糯，如同一块会思考的奶糖，网友爱称"奶蛙"。"奶"字既指颜色，也暗含"奶一口"的宠溺之意。</p>
+      </div>
+      <div class="era">
+        <div class="era-title"><span class="date">斗图纪元</span>⚔️ 万能回复的崛起</div>
+        <p>"容我三思"——奶蛙成为群聊斗图的战略级武器。当问题难以回答、敷衍需要体面、回复必须可爱时，奶蛙从不缺席。据不完全统计，它至少化解了九亿次尴尬。</p>
+      </div>
+      <div class="era">
+        <div class="era-title"><span class="date">二创纪元</span>🎨 表情包宇宙大爆炸</div>
+        <p>奶蛙宇宙开始膨胀：举牌蛙、加班蛙、发疯蛙、佛系蛙……每一个变体都是当代年轻人精神状态的一面镜子。奶蛙不再只是表情包，而是一门显学。</p>
+      </div>
+      <div class="era">
+        <div class="era-title"><span class="date">AI 纪元</span>🤖 算力加持的井喷</div>
+        <p>AI 生成工具普及后，奶蛙二创呈指数级增长。人人都能让奶蛙思考任何事——尽管它思考的结论，仍然是"让我再想想"。</p>
+      </div>
+      <div class="era">
+        <div class="era-title"><span class="date">全球纪元</span>🌐 跨语言传播与观测站建立</div>
+        <p>奶蛙突破语言边界，成为全球通用情绪符号。为统计这只青蛙的影响力，<b>奶蛙观测站</b>正式建立——也就是你正在看的这个页面。</p>
+      </div>
+      <div class="era">
+        <div class="era-title"><span class="date">未来纪元</span>🚀 奶蛙登月计划（未完待续）</div>
+        <p>传说当奶蛙思考到第一万次时，它将得出那个终极答案。而观测站的使命，就是见证这一刻的到来。历史仍在书写中……</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 砸箱子模块 ================= -->
+  <div class="grid-2">
+    <div class="card" id="case">
+      <h2>🎁 奶蛙砸箱子 <span class="tag">点击宝箱 · 概率开出稀有奶蛙藏品</span></h2>
+      <div class="case-stage">
+        <div class="case-box" id="caseBox">
+          <img class="frog-hammer" src="naiwa.webp" id="hammer" alt="奶蛙锤">
+          <svg viewBox="0 0 150 120" width="150" height="120">
+            <defs>
+              <linearGradient id="boxg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffd94d"/><stop offset="1" stop-color="#e8a80c"/>
+              </linearGradient>
+            </defs>
+            <path d="M15 50 L75 15 L135 50 L135 105 L15 105 Z" fill="url(#boxg)" stroke="#b8860b" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M15 50 L75 30 L135 50" fill="none" stroke="#fff3c4" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="75" cy="72" r="10" fill="#fff8ec" stroke="#b8860b" stroke-width="3"/>
+            <circle cx="75" cy="72" r="4" fill="#b8860b"/>
+            <path d="M75 15 L75 30" stroke="#b8860b" stroke-width="3"/>
+          </svg>
+        </div>
+        <button class="btn" id="smashBtn">🔨 砸开宝箱</button>
+        <div id="prizeWrap"></div>
+        <div class="ticket-hint">开出「隐藏款」的概率只有 0.5%，传说手气好的人一整年都在走运 🍀</div>
+      </div>
+    </div>
+
+    <!-- ================= 送票模块 ================= -->
+    <div class="card" id="ticket">
+      <h2>🎫 奶蛙送你机票和火车票 <span class="tag">点击抽取 · 奶蛙承包你的下一程</span></h2>
+      <div class="ticket-stage">
+        <div id="ticketArea">
+          <img class="frog-jump" src="naiwa.webp" alt="奶蛙">
+          <div class="ticket-hint" style="margin-bottom:18px">奶蛙正在思考送你去哪儿……<br>点击下面的按钮让它决定 ✨</div>
+        </div>
+        <button class="btn" id="ticketBtn">🎫 让奶蛙送你一张票</button>
+        <div class="ticket-hint">纯娱乐抽取 · 虚拟车票不能真的上车 · 但心情可以真的起飞</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="disclaimer">
+      ⚠️ 本站当前为 <b>演示模式</b>：页面由高仿真模拟数据流驱动，用于展示实时统计、图形化与动画能力。<br>
+      接入真实数据只需将各平台 API / 爬虫集群的输出对接到本站的 <code>/api/stream</code> 数据接口即可，前端零改动。
+    </div>
+  </footer>
+</div>
+
+<script>
+/* ================= 模拟数据引擎（全球版） ================= */
+const countries = ["中国","美国","日本","韩国","印度","泰国","越南","马来西亚","新加坡","印度尼西亚","菲律宾","英国","法国","德国","意大利","西班牙","俄罗斯","加拿大","巴西","澳大利亚","埃及","南非","墨西哥","土耳其","沙特阿拉伯","新西兰","荷兰","瑞典","波兰","阿根廷"];
+const coords = {
+  "中国":[116.4,39.9],"美国":[-98,39.5],"日本":[139.7,35.7],"韩国":[127,37.5],"印度":[77.2,28.6],
+  "泰国":[100.5,13.8],"越南":[105.8,21.0],"马来西亚":[101.7,3.1],"新加坡":[103.8,1.35],"印度尼西亚":[106.8,-6.2],
+  "菲律宾":[121.0,14.6],"英国":[-0.1,51.5],"法国":[2.35,48.85],"德国":[13.4,52.5],"意大利":[12.5,41.9],
+  "西班牙":[-3.7,40.4],"俄罗斯":[37.6,55.75],"加拿大":[-106,56],"巴西":[-47.9,-15.8],"澳大利亚":[149.1,-35.3],
+  "埃及":[31.2,30.0],"南非":[28.0,-26.2],"墨西哥":[-99.1,19.4],"土耳其":[32.85,39.93],"沙特阿拉伯":[46.7,24.7],
+  "新西兰":[174.8,-41.3],"荷兰":[4.9,52.37],"瑞典":[18.06,59.33],"波兰":[21.0,52.23],"阿根廷":[-58.4,-34.6]
+};
+const weights = [100,86,64,58,52,47,44,40,38,36,33,30,28,27,24,22,20,19,17,16,14,12,11,10,9,8,7,6,5,4];
+const baseData = {};
+countries.forEach((c,i)=>{
+  baseData[c] = Math.round(9000 * (weights[i]||4) / 100 * (0.75+Math.random()*0.5));
+});
+const acts = [
+  "在斗图中发出了奶蛙思考表情包","在评论区贴出奶蛙配图「让我想想」","在弹幕里刷了奶蛙语录",
+  "把奶蛙设为群表情置顶","转发了奶蛙二创动图","在论坛发布了奶蛙主题帖",
+  "用奶蛙回应了工作群消息","收藏了奶蛙高清原图","给奶蛙梗图点了赞","用奶蛙回复了「容我三思」"
+];
+function maskIP(){ return `${1+Math.floor(Math.random()*223)}.${Math.floor(Math.random()*256)}.${Math.floor(Math.random()*256)}.*`; }
+function randProvince(){ return countries[Math.floor(Math.random()*Math.max(6, countries.length*0.5))]; }
+function now(){ const d=new Date(); return d.toTimeString().slice(0,8); }
+
+/* ================= 顶部计数器 ================= */
+let total = 2846739 + Math.floor(Math.random()*50000);
+let ipCount = 892431 + Math.floor(Math.random()*5000);
+let rate = 240 + Math.floor(Math.random()*80);
+let peak = 0;
+function countUp(el, target){
+  const start = +el.textContent.replace(/,/g,"")||0;
+  const diff = target-start;
+  const t0 = performance.now();
+  (function step(t){
+    const p = Math.min((t-t0)/600,1);
+    el.textContent = Math.round(start+diff*p).toLocaleString();
+    if(p<1) requestAnimationFrame(step);
+  })(t0);
+}
+countUp(document.getElementById("total"), total);
+countUp(document.getElementById("ips"), ipCount);
+countUp(document.getElementById("rate"), rate);
+countUp(document.getElementById("peak"), 580);
+
+setInterval(()=>{
+  rate = Math.max(120, rate + Math.floor(Math.random()*21)-10);
+  total += rate*2;
+  ipCount += Math.floor(Math.random()*40);
+  if(rate>peak){ peak=rate; document.getElementById("peakTime").textContent="▲ 刚刚刷新"; }
+  countUp(document.getElementById("total"), total);
+  countUp(document.getElementById("ips"), ipCount);
+  countUp(document.getElementById("rate"), rate);
+  countUp(document.getElementById("peak"), peak+320);
+}, 2000);
+
+/* ================= 实时数据流 ================= */
+const feedEl = document.getElementById("feed");
+function pushFeed(){
+  const li = document.createElement("li");
+  const p = randProvince();
+  li.innerHTML = `<span class="time">${now()}</span><span class="ip">${maskIP()}</span> · ${p}
+    <span class="act">${acts[Math.floor(Math.random()*acts.length)]}</span>`;
+  feedEl.prepend(li);
+  while(feedEl.children.length>24) feedEl.lastChild.remove();
+}
+for(let i=0;i<10;i++) pushFeed();
+setInterval(pushFeed, 900);
+
+/* ================= 全球地图 + 传播连线 ================= */
+const mapChart = echarts.init(document.getElementById("map"));
+fetch("https://geo.datav.aliyun.com/areas_v3/bound/world.geojson").then(r=>r.json()).then(geo=>{
+  echarts.registerMap("world", geo);
+  // 从中国出发的奶蛙文化传播飞线
+  const linesData = countries.filter(c=>c!=="中国").map(c=>({
+    coords:[coords["中国"], coords[c]]
+  }));
+  mapChart.setOption({
+    backgroundColor:"#fffdf5",
+    tooltip:{formatter:p=>p.seriesType==="map"?`${p.name}：${(p.value||0).toLocaleString()} 次/日`:p.seriesType==="effectScatter"?`${p.name}：${baseData[p.name].toLocaleString()} 次/日 🐸`:"奶蛙文化传播线"},
+    visualMap:{
+      min:0,max:9000,left:10,bottom:10,calculable:true,
+      text:["高频","低频"],
+      inRange:{color:["#fff6d8","#ffe08a","#ffb84d","#f5862d","#d94f2b"]}
+    },
+    geo:{
+      map:"world", roam:true, zoom:1.2, scaleLimit:{min:0.8,max:8},
+      itemStyle:{areaColor:"#faf3e0",borderColor:"#e8d9b5",borderWidth:0.5},
+      emphasis:{label:{show:true},itemStyle:{areaColor:"#ffe08a"}}
+    },
+    series:[
+      {
+        type:"map", geoIndex:0,
+        data:countries.map(c=>({name:c,value:baseData[c]}))
+      },
+      {
+        type:"effectScatter", coordinateSystem:"geo", zlevel:2,
+        symbolSize:val=>8+val[2]/450,
+        rippleEffect:{brushType:"stroke",scale:3,period:4},
+        itemStyle:{color:"#f5a623",shadowBlur:10,shadowColor:"#f5a623"},
+        encode:{value:2},
+        data:countries.map(c=>({name:c,value:[...coords[c],baseData[c]]}))
+      },
+      {
+        type:"lines", coordinateSystem:"geo", zlevel:3,
+        effect:{show:true,period:3.2,trailLength:0.35,symbol:"arrow",symbolSize:5,color:"#e8853d"},
+        lineStyle:{color:"#f0c040",width:1.2,opacity:0.45,curveness:0.3},
+        data:linesData
+      }
+    ],
+    graphic:[{
+      type:"image", id:"frog", right:30, top:30, z:10, silent:true,
+      style:{image:"naiwa.webp",width:56,height:56}
+    }]
+  });
+}).catch(()=>{ document.getElementById("map").innerHTML='<div style="text-align:center;padding:120px 0;color:#8a7a5c">全球地图资源加载失败，请检查网络</div>'; });
+
+/* ================= 趋势图 ================= */
+const trendChart = echarts.init(document.getElementById("trend"));
+const hours=[], vals=[];
+for(let h=0;h<24;h++){
+  hours.push(h+":00");
+  vals.push(Math.round(120+380*Math.exp(-Math.pow((h-21)/4.5,2))+260*Math.exp(-Math.pow((h-13)/3.5,2))+Math.random()*40));
+}
+trendChart.setOption({
+  tooltip:{trigger:"axis"},
+  xAxis:{type:"category",data:hours,boundaryGap:false,axisLabel:{color:"#8a7a5c"}},
+  yAxis:{type:"value",axisLabel:{color:"#8a7a5c"},splitLine:{lineStyle:{color:"#f4e8c8"}}},
+  grid:{left:50,right:20,top:20,bottom:30},
+  series:[{
+    name:"使用频率(次/秒)",type:"line",smooth:true,data:vals,symbol:"none",
+    lineStyle:{width:3,color:"#f5a623"},
+    areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:"rgba(255,200,60,.55)"},{offset:1,color:"rgba(255,200,60,.03)"}])}
+  }]
+});
+setInterval(()=>{
+  const nv = Math.max(100, vals[23]+Math.floor(Math.random()*31)-15);
+  vals.shift(); vals.push(nv);
+  trendChart.setOption({series:[{data:vals}]});
+}, 3000);
+
+/* ================= 场景饼图 ================= */
+const pieChart = echarts.init(document.getElementById("pie"));
+pieChart.setOption({
+  tooltip:{trigger:"item",formatter:"{b}：{c}%"},
+  legend:{bottom:0,textStyle:{color:"#8a7a5c"}},
+  series:[{
+    type:"pie",radius:["38%","68%"],center:["50%","45%"],
+    label:{formatter:"{b}\n{d}%"},
+    itemStyle:{borderRadius:8,borderColor:"#fff",borderWidth:3},
+    animationTypeUpdate:"transition",
+    data:[
+      {value:42,name:"表情包斗图",itemStyle:{color:"#f5b800"}},
+      {value:23,name:"评论区配图",itemStyle:{color:"#ffd94d"}},
+      {value:15,name:"弹幕刷屏",itemStyle:{color:"#7ec850"}},
+      {value:12,name:"社群转发",itemStyle:{color:"#e8853d"}},
+      {value:8,name:"帖子/长文",itemStyle:{color:"#a5d96c"}}
+    ]
+  }]
+});
+
+/* ================= 排行榜 ================= */
+const rankEl = document.getElementById("rank");
+function renderRank(){
+  const sorted = [...countries].sort((a,b)=>baseData[b]-baseData[a]).slice(0,10);
+  const max = baseData[sorted[0]];
+  rankEl.innerHTML = sorted.map((p,i)=>
+    `<div class="row"><span class="name">${i<3?"🥇🥈🥉"[i]:"&nbsp;"+(i+1)} ${p}</span>
+     <div class="bar-bg"><div class="bar" style="width:${(baseData[p]/max*100).toFixed(1)}%"></div></div>
+     <span class="val">${baseData[p].toLocaleString()}</span></div>`).join("");
+}
+renderRank();
+setInterval(()=>{
+  const p = randProvince();
+  baseData[p] += Math.floor(Math.random()*120);
+  renderRank();
+  mapChart.setOption({series:[{data:countries.map(x=>({name:x,value:baseData[x]}))}]});
+}, 4000);
+
+/* ================= 历史时间轴滚动显现 ================= */
+const eras = document.querySelectorAll(".era");
+const io = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add("show"); });
+},{threshold:0.15});
+eras.forEach(el=>io.observe(el));
+
+/* ================= 奶蛙砸箱子 ================= */
+const prizes = [
+  {r:"common", rn:"普通", n:"奶蛙贴纸 ×1", d:"最基础也最常用的藏品，贴哪儿哪儿可爱。", w:40},
+  {r:"common", rn:"普通", n:"奶蛙语录「让我想想」", d:"百年后依然没想好的那句名言。", w:25},
+  {r:"rare",   rn:"稀有", n:"奶蛙高清壁纸", d:"放大八倍依然奶得均匀。", w:15},
+  {r:"rare",   rn:"稀有", n:"奶蛙表情包合集（30张）", d:"一次砸出一整套斗图弹药。", w:10},
+  {r:"epic",   rn:"史诗", n:"奶蛙限定动图", d:"会动的奶蛙，思考频率提升300%。", w:6},
+  {r:"epic",   rn:"史诗", n:"虚拟奶蛙手办", d:"摸不到，但心可以摸到。", w:2.5},
+  {r:"legend", rn:"传说", n:"纯金奶蛙", d:"999足金（虚拟），保值全靠心情。", w:1},
+  {r:"legend", rn:"传说", n:"奶蛙之魂", d:"装备后斗图胜率+100%。", w:0.5},
+  {r:"hidden", rn:"隐藏款", n:"会思考的你", d:"其实整个观测站，一直在观测的是还在看这句的你。🐸", w:0.5}
+];
+function pickPrize(){
+  const r = Math.random()*100;
+  let acc = 0;
+  for(const p of prizes){ acc += p.w; if(r<=acc) return p; }
+  return prizes[0];
+}
+const smashBtn = document.getElementById("smashBtn");
+const caseBox = document.getElementById("caseBox");
+const hammer = document.getElementById("hammer");
+const prizeWrap = document.getElementById("prizeWrap");
+let smashing = false;
+smashBtn.addEventListener("click", ()=>{
+  if(smashing) return;
+  smashing = true;
+  smashBtn.disabled = true;
+  prizeWrap.innerHTML = "";
+  caseBox.classList.remove("burst");
+  caseBox.classList.add("shake");
+  hammer.classList.add("swing");
+  setTimeout(()=>{ hammer.classList.remove("swing"); }, 520);
+  setTimeout(()=>{
+    caseBox.classList.remove("shake");
+    caseBox.classList.add("burst");
+  }, 1300);
+  setTimeout(()=>{
+    const p = pickPrize();
+    const div = document.createElement("div");
+    div.className = `prize r-${p.r}`;
+    div.innerHTML = `<span class="rarity">${p.rn}</span><div class="prize-name">${p.n}</div><div class="prize-desc">${p.d}</div>`;
+    prizeWrap.appendChild(div);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>div.classList.add("show")));
+    setTimeout(()=>{
+      caseBox.classList.remove("burst");
+      caseBox.style.opacity = "1";
+      smashing = false;
+      smashBtn.disabled = false;
+    }, 900);
+  }, 1900);
+});
+
+/* ================= 奶蛙送票 ================= */
+const airCities = ["北京","上海","成都","三亚","大理","重庆","厦门","西安","东京","巴黎","冰岛","马尔代夫","新西兰","瑞士","京都"];
+const trainCities = ["北京","上海","广州","深圳","成都","杭州","武汉","长沙","西安","南京","重庆","青岛","哈尔滨","昆明"];
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function randNum(n){ return Array.from({length:n},()=>Math.floor(Math.random()*10)).join(""); }
+const ticketBtn = document.getElementById("ticketBtn");
+const ticketArea = document.getElementById("ticketArea");
+ticketBtn.addEventListener("click", ()=>{
+  const isAir = Math.random()<0.45;
+  let html;
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
+  if(isAir){
+    let a=pick(airCities), b=pick(airCities);
+    while(b===a) b=pick(airCities);
+    const flight = pick(["MF","CA","MU","CZ","HU","9C"]) + randNum(4);
+    const seat = pick(["经济舱","超级经济舱","商务舱","头等舱"]);
+    const gate = "C" + (1+Math.floor(Math.random()*18));
+    const bd = pick(["08:20","11:45","14:30","17:55","21:10"]);
+    html = `<div class="ticket"><div class="air-ticket show">
+      <div class="ticket-head"><b>🐸 奶蛙航空 NAIWA AIR</b><span class="t-type">登机牌</span></div>
+      <div class="ticket-body">
+        <div class="route"><span class="city">${a}</span><span class="arrow"></span><span class="city">${b}</span></div>
+        <div class="t-row"><span>航班 <b>${flight}</b></span><span>日期 <b>${dateStr}</b></span></div>
+        <div class="t-row"><span>登机口 <b>${gate}</b></span><span>登机 <b>${bd}</b></span></div>
+        <div class="t-row"><span>舱位 <b>${seat}</b></span><span>乘客 <b>思考蛙の朋友</b></span></div>
+      </div>
+      <div class="ticket-teeth"></div>
+      <div class="ticket-foot">奶蛙航空提示：本票由奶蛙全额赞助 · 起飞前请收起小桌板并继续思考 ✈</div>
+    </div></div>`;
+  }else{
+    let a=pick(trainCities), b=pick(trainCities);
+    while(b===a) b=pick(trainCities);
+    const trainNo = pick(["G","D","K"]) + (100+Math.floor(Math.random()*8999));
+    const seat = pick(["二等座","一等座","商务座","硬卧"]) + " " + (1+Math.floor(Math.random()*16)) + "车" + String(1+Math.floor(Math.random()*20)).padStart(2,"0") + "号";
+    const dep = pick(["07:15","09:36","12:08","15:42","18:24","20:56"]);
+    const price = (50+Math.floor(Math.random()*900));
+    html = `<div class="ticket"><div class="train-ticket show">
+      <div class="ticket-head"><b>🐸 奶蛙铁路</b><span class="t-type">电子客票</span></div>
+      <div class="ticket-body">
+        <div class="route"><span class="city">${a}</span><span class="arrow"></span><span class="city">${b}</span></div>
+        <div class="t-row"><span>车次 <b>${trainNo}</b></span><span>日期 <b>${dateStr}</b></span></div>
+        <div class="t-row"><span>开点 <b>${dep}</b></span><span>检票口 <b>${1+Math.floor(Math.random()*12)}号</b></span></div>
+        <div class="t-row"><span>座位 <b>${seat}</b></span><span>票价 <b>¥${price}.5</b></span></div>
+      </div>
+      <div class="ticket-teeth"></div>
+      <div class="ticket-foot">奶蛙铁路提示：本次列车全程播放「让我想想」· 请勿在思考中越过黄线 🚄</div>
+    </div></div>`;
+  }
+  ticketArea.innerHTML = html;
+});
+
+window.addEventListener("resize",()=>{mapChart.resize();trendChart.resize();pieChart.resize();});
+</script>
+</body>
+</html>
