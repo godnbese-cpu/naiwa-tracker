@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏎️ 奶蛙极速杯 · 大奖赛</title>
+<link rel="icon" href="naiwa.webp">
+<style>
+  :root{
+    --bg:#05071a; --ink:#e8ecff; --muted:#8b93c8; --line:#2a3a6a;
+    --frog1:#ffd94d; --cyan:#22d3ee; --accent:#ff6ec7; --green:#7ec850;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:radial-gradient(1000px 600px at 50% -10%, rgba(34,211,238,.12), transparent 60%), var(--bg);
+    color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;
+  }
+  header{text-align:center;padding:22px 14px 8px}
+  h1{font-size:clamp(22px,4vw,34px);letter-spacing:3px;
+    background:linear-gradient(90deg,#22d3ee,#ffd94d,#ff6ec7);background-size:250% 100%;
+    -webkit-background-clip:text;background-clip:text;color:transparent;animation:flow 5s linear infinite}
+  @keyframes flow{0%{background-position:0 0}100%{background-position:250% 0}}
+  .sub{color:var(--muted);font-size:13px;margin-top:6px}
+  a.back{color:var(--cyan);text-decoration:none;font-size:13px;position:absolute;left:16px;top:24px;border:1px solid rgba(34,211,238,.35);border-radius:20px;padding:5px 14px}
+  a.back:hover{box-shadow:0 0 14px rgba(34,211,238,.35)}
+
+  .stage{position:relative;margin:12px 0 6px;width:min(480px,94vw)}
+  canvas#game{
+    width:100%;display:block;border-radius:18px;border:1px solid var(--line);
+    box-shadow:0 0 40px rgba(34,211,238,.18);background:#070b22;touch-action:none;
+  }
+  .overlay{
+    position:absolute;inset:0;border-radius:18px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;text-align:center;
+    background:rgba(5,7,26,.82);backdrop-filter:blur(4px);padding:26px;
+  }
+  .overlay.hidden{display:none}
+  .overlay img{width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid var(--frog1);box-shadow:0 0 30px rgba(255,217,77,.45);animation:hop 1s ease infinite}
+  @keyframes hop{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  .overlay h2{font-size:26px;letter-spacing:2px}
+  .overlay p{color:var(--muted);font-size:13px;line-height:1.9;max-width:340px}
+  .overlay .big{font-size:34px;font-weight:800;color:var(--frog1);text-shadow:0 0 20px rgba(255,217,77,.5)}
+  .btn{
+    border:none;cursor:pointer;font-size:15px;font-weight:800;padding:13px 40px;border-radius:30px;
+    color:#05071a;background:linear-gradient(135deg,#22d3ee,#ffd94d);
+    box-shadow:0 0 24px rgba(34,211,238,.45);font-family:inherit;transition:all .25s;
+  }
+  .btn:hover{transform:translateY(-3px);box-shadow:0 0 34px rgba(34,211,238,.7)}
+  .keys{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;font-size:12px;color:var(--muted)}
+  .keys b{border:1px solid var(--line);border-radius:8px;padding:4px 10px;color:var(--ink);font-family:Consolas,monospace}
+  .rank-list{font-size:14px;line-height:2.2;min-width:240px}
+  .rank-list .me{color:var(--frog1);font-weight:800}
+  .rank-list .rival{color:var(--muted)}
+  footer{color:var(--muted);font-size:12px;padding:16px;text-align:center;line-height:1.9}
+</style>
+</head>
+<body>
+<a class="back" href="index.html">← 观测站</a>
+<header>
+  <h1>🏎️ 奶蛙极速杯 · 大奖赛</h1>
+  <div class="sub">为庆祝奶蛙诞生而举办 · 超越彩虹奶蛙军团，捧起奶蛙杯 🏆</div>
+</header>
+
+<div class="stage">
+  <canvas id="game" width="480" height="700"></canvas>
+
+  <div class="overlay" id="menu">
+    <img src="naiwa.webp" alt="奶蛙">
+    <h2>奶蛙极速杯</h2>
+    <p>终点线在 <b>3000 米</b>外！躲避彩虹奶蛙军团，收集奶糖加速，抢在对手之前冲线！</p>
+    <div class="keys">
+      <span><b>← →</b> / <b>A D</b> 转向</span>
+      <span><b>↑</b> / <b>W</b> 冲刺</span>
+      <span><b>↓</b> / <b>S</b> 刹车</span>
+    </div>
+    <p style="font-size:11px">手机：按住屏幕左 / 右半边转向，上滑冲刺</p>
+    <button class="btn" id="startBtn">🏁 发车！</button>
+    <p style="font-size:12px" id="bestText"></p>
+  </div>
+
+  <div class="overlay hidden" id="endScreen">
+    <img src="naiwa.webp" alt="奶蛙">
+    <h2 id="endTitle">比赛结束</h2>
+    <div class="big" id="endBig"></div>
+    <div class="rank-list" id="endRank"></div>
+    <p id="endTime"></p>
+    <button class="btn" id="againBtn">🔄 再跑一局</button>
+  </div>
+</div>
+
+<footer>
+  🐸 奶蛙诞生庆典特别活动 · 奶蛙形象经过程序化换色生成彩虹对手，原图版权归奶蛙本体所有<br>
+  冲刺有体力条限制，被撞会减速——策略性贴线超车才是王道
+</footer>
+
+<script>
+(function(){
+"use strict";
+const cv=document.getElementById("game"),ctx=cv.getContext("2d");
+const W=cv.width,H=cv.height;
+const ROAD_L=70,ROAD_R=W-70,LANES=4;
+const LANE_W=(ROAD_R-ROAD_L)/LANES;
+const laneX=i=>ROAD_L+LANE_W*(i+0.5);
+
+/* ---------- 素材：奶蛙 + 换色变体 ---------- */
+const frogImg=new Image();frogImg.src="naiwa.webp";
+const RIVAL_TINTS=[
+  "hue-rotate(140deg) saturate(1.3)",
+  "hue-rotate(250deg) saturate(1.2)",
+  "hue-rotate(60deg) saturate(1.4)",
+  "hue-rotate(200deg) saturate(1.1)",
+  "hue-rotate(300deg) saturate(1.3)",
+  "hue-rotate(180deg) saturate(1.2)"
+];
+const RIVAL_NAMES=["赤焰奶蛙","碧波奶蛙","紫电奶蛙","金曜奶蛙","粉霁奶蛙","靛空奶蛙"];
+const RIVAL_COLORS=["#ff5a5a","#4dd97a","#a06bff","#ffd94d","#ff7ac8","#5aa8ff"];
+let tintCache={};
+function tintedFrog(i,size){
+  const key=i+"_"+size;
+  if(tintCache[key])return tintCache[key];
+  const c=document.createElement("canvas");
+  c.width=c.height=size;
+  const cx=c.getContext("2d");
+  cx.filter=RIVAL_TINTS[i%RIVAL_TINTS.length];
+  if(frogImg.complete&&frogImg.naturalWidth)cx.drawImage(frogImg,0,0,size,size);
+  tintCache[key]=c;
+  return c;
+}
+frogImg.onload=()=>{tintCache={};};
+
+/* ---------- 游戏状态 ---------- */
+const TOTAL_M=3000;
+let state="menu";
+let player,rivals,candies,particles,roadOffset,time,dist,speed,boost,stamina,shakeT,invuln;
+let best=+(localStorage.getItem("naiwa_best_time")||0);
+const bestText=document.getElementById("bestText");
+function fmtT(t){const m=Math.floor(t/60),s=(t%60).toFixed(1);return m>0?`${m}分${s}秒`:`${s}秒`;}
+function refreshBest(){bestText.textContent=best?`🏆 圈速纪录：${fmtT(best)}`:"尚无完赛纪录，来创造历史！";}
+refreshBest();
+
+function reset(){
+  player={x:laneX(1),targetLane:1,y:H-150,w:74,h:74,tilt:0};
+  rivals=[];
+  candies=[];
+  particles=[];
+  roadOffset=0;time=0;dist=0;speed=330;boost=0;
+  stamina=1;shakeT=0;invuln=0;
+  // 三名宿敌：恒定巡航速度（米/秒），有快有慢
+  rivals=[
+    {name:"碧波奶蛙",color:"#4dd97a",v:29.5,done:false,t:0},
+    {name:"紫电奶蛙",color:"#a06bff",v:31.5,done:false,t:0},
+    {name:"金曜奶蛙",color:"#ffd94d",v:33.8,done:false,t:0}
+  ];
+}
+
+/* ---------- 输入 ---------- */
+const keys={};
+addEventListener("keydown",e=>{
+  keys[e.key.toLowerCase()]=true;
+  if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase()))e.preventDefault();
+});
+addEventListener("keyup",e=>{keys[e.key.toLowerCase()]=false;});
+let touchX=null,touchBoost=false;
+cv.addEventListener("pointerdown",e=>{touchX=e.clientX;touchBoost=e.clientY<cv.getBoundingClientRect().top+H*0.3;});
+cv.addEventListener("pointermove",e=>{if(touchX!==null)touchX=e.clientX;});
+cv.addEventListener("pointerup",()=>{touchX=null;touchBoost=false;});
+
+/* ---------- 生成 ---------- */
+let spawnT=0,candyT=0;
+function spawnTraffic(){
+  const lane=Math.floor(Math.random()*LANES);
+  traffic.push({
+    lane, y:-90,
+    v:120+Math.random()*100, // 相对路面的绝对速度（慢于玩家）
+    tint:Math.floor(Math.random()*RIVAL_TINTS.length),
+    name:RIVAL_NAMES[Math.floor(Math.random()*RIVAL_NAMES.length)],
+    color:RIVAL_COLORS[Math.floor(Math.random()*RIVAL_COLORS.length)]
+  });
+}
+let traffic=[];
+function spawnCandy(){
+  candies.push({lane:Math.floor(Math.random()*LANES),y:-60,got:0});
+}
+
+/* ---------- 粒子 ---------- */
+function puff(x,y,color,n=8){
+  for(let i=0;i<n;i++)particles.push({
+    x,y,vx:(Math.random()-.5)*160,vy:-Math.random()*120,
+    life:.5+Math.random()*.4,t:0,color,r:2+Math.random()*3
+  });
+}
+
+/* ---------- 主循环 ---------- */
+let last=performance.now();
+function loop(now){
+  const dt=Math.min((now-last)/1000,0.05);last=now;
+  if(state==="run")update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function update(dt){
+  time+=dt;
+  // 冲刺
+  const wantBoost=(keys["arrowup"]||keys["w"]||touchBoost)&&stamina>0.02;
+  if(wantBoost){boost=260;stamina=Math.max(0,stamina-dt*0.32);}
+  else{boost*=Math.pow(.02,dt);stamina=Math.min(1,stamina+dt*0.14);}
+  // 刹车
+  const brake=(keys["arrowdown"]||keys["s"])?.45:1;
+  speed=330+dist/26+boost;
+  speed*=brake;
+  // 距离（米）：10px = 1m
+  dist+=speed*dt/10;
+  roadOffset=(roadOffset+speed*dt)%80;
+
+  // 转向
+  let dir=0;
+  if(keys["arrowleft"]||keys["a"])dir=-1;
+  if(keys["arrowright"]||keys["d"])dir=1;
+  if(touchX!==null){
+    const rect=cv.getBoundingClientRect();
+    const rel=(touchX-rect.left)/rect.width;
+    dir=rel<0.5?-1:1;
+  }
+  player.tilt+=(dir*0.22-player.tilt)*Math.min(1,dt*10);
+  player.targetLane=Math.max(0,Math.min(LANES-1,player.targetLane+dir*dt*3.4));
+  player.x=laneX(player.targetLane);
+
+  if(invuln>0)invuln-=dt;
+  if(shakeT>0)shakeT-=dt;
+
+  // 生成慢车与奶糖
+  spawnT-=dt;candyT-=dt;
+  if(spawnT<=0){spawnTraffic();spawnT=Math.max(.55,1.5-dist/4000);}
+  if(candyT<=0){spawnCandy();candyT=1.2+Math.random()*1.4;}
+
+  // 慢车运动（相对：车自身速度 - 玩家速度 → 屏幕下移）
+  for(const t of traffic){
+    t.y+=(speed-t.v)*dt;
+    // 碰撞
+    if(!t.passed&&!t.hit&&invuln<=0){
+      const dx=Math.abs(laneX(t.lane)-player.x),dy=Math.abs(t.y-player.y);
+      if(dx<54&&dy<54){
+        t.hit=true;invuln=1.4;shakeT=.5;
+        speed*=0.01;boost=0;
+        puff(player.x,player.y-30,"#ff5a5a",16);
+      }
+    }
+    if(!t.passed&&t.y>player.y&&!t.hit){t.passed=true;overtakes++;}
+  }
+  traffic=traffic.filter(t=>t.y<H+120);
+
+  // 奶糖
+  for(const c of candies){
+    c.y+=speed*dt;
+    if(!c.got&&Math.abs(laneX(c.lane)-player.x)<48&&Math.abs(c.y-player.y)<48){
+      c.got=1;candyCount++;
+      puff(laneX(c.lane),c.y,"#ffd94d",10);
+    }
+  }
+  candies=candies.filter(c=>c.y<H+80&&!c.got);
+
+  // 宿敌进度
+  for(const r of rivals){
+    if(!r.done){ r.t=time; r.dist=r.v*time; if(r.dist>=TOTAL_M){r.done=true;r.finishT=time;} }
+  }
+
+  // 粒子
+  for(const p of particles){p.t+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt+speed*dt*0.4;p.vy+=260*dt;}
+  particles=particles.filter(p=>p.t<p.life);
+
+  // 尾气粒子
+  if(Math.random()<.5)puff(player.x+(Math.random()-.5)*30,player.y+38,"rgba(34,211,238,.8)",1);
+
+  // 完赛判定
+  if(dist>=TOTAL_M)finish();
+}
+let overtakes=0,candyCount=0;
+
+function finish(){
+  state="end";
+  player.finishT=time;
+  const all=[...rivals.map(r=>({name:r.name,t:r.finishT,color:r.color})),
+              {name:"你（奶蛙本蛙）",t:time,color:"#22d3ee",me:1}]
+             .sort((a,b)=>a.t-b.t);
+  const myRank=all.findIndex(r=>r.me)+1;
+  if(!best||time<best){best=time;localStorage.setItem("naiwa_best_time",best);refreshBest();}
+  const endTitle=document.getElementById("endTitle");
+  const endBig=document.getElementById("endBig");
+  endTitle.textContent=myRank===1?"🏆 冠军！奶蛙杯是你的了！":myRank===2?"🥈 亚军！差一点点！":myRank===3?"🥉 季军，登台领奖！":"完赛！下次一定";
+  endBig.textContent=`第 ${myRank} 名 · ${fmtT(time)}`;
+  document.getElementById("endRank").innerHTML=all.map((r,i)=>
+    `<div class="${r.me?"me":"rival"}">${i+1}. <span style="color:${r.color}">●</span> ${r.name} — ${fmtT(r.t)}</div>`).join("");
+  document.getElementById("endTime").innerHTML=`超车 ${overtakes} 次 · 吃奶糖 ${candyCount} 颗 · 奶糖加成让极速更持久 🍬`;
+  document.getElementById("endScreen").classList.remove("hidden");
+}
+
+/* ---------- 渲染 ---------- */
+function draw(){
+  ctx.save();
+  if(shakeT>0)ctx.translate((Math.random()-.5)*10*shakeT,(Math.random()-.5)*10*shakeT);
+
+  // 背景
+  ctx.fillStyle="#070b22";ctx.fillRect(-20,-20,W+40,H+40);
+  // 路侧霓虹
+  const glow=ctx.createLinearGradient(0,0,W,0);
+  glow.addColorStop(0,"rgba(34,211,238,.12)");glow.addColorStop(1,"rgba(255,110,199,.12)");
+  ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);
+  // 路面
+  ctx.fillStyle="#0a0f2a";ctx.fillRect(ROAD_L,0,ROAD_R-ROAD_L,H);
+  // 车道线
+  ctx.strokeStyle="rgba(232,236,255,.16)";ctx.lineWidth=4;ctx.setLineDash([34,46]);
+  ctx.lineDashOffset=-roadOffset;
+  for(let i=1;i<LANES;i++){ctx.beginPath();ctx.moveTo(ROAD_L+LANE_W*i,0);ctx.lineTo(ROAD_L+LANE_W*i,H);ctx.stroke();}
+  ctx.setLineDash([]);
+  // 路肩霓虹线
+  ctx.shadowBlur=14;
+  ctx.shadowColor="#22d3ee";ctx.strokeStyle="#22d3ee";ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(ROAD_L,0);ctx.lineTo(ROAD_L,H);ctx.stroke();
+  ctx.shadowColor="#ff6ec7";ctx.strokeStyle="#ff6ec7";
+  ctx.beginPath();ctx.moveTo(ROAD_R,0);ctx.lineTo(ROAD_R,H);ctx.stroke();
+  ctx.shadowBlur=0;
+  // 速度线
+  const sl=speed>380;
+  if(sl){
+    ctx.strokeStyle=`rgba(34,211,238,${Math.min(.3,(speed-380)/900)})`;ctx.lineWidth=1.5;
+    for(let i=0;i<10;i++){
+      const y=(roadOffset*3+i*H/10)%H;
+      ctx.beginPath();ctx.moveTo(ROAD_L+8,y);ctx.lineTo(ROAD_L+8,y+46);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ROAD_R-8,y);ctx.lineTo(ROAD_R-8,y+46);ctx.stroke();
+    }
+  }
+
+  if(state==="run"||state==="end"){
+    // 奶糖
+    for(const c of candies){
+      if(c.got)continue;
+      const x=laneX(c.lane);
+      ctx.save();ctx.translate(x,c.y);ctx.rotate(c.y*0.04);
+      ctx.shadowBlur=12;ctx.shadowColor="#ffd94d";
+      ctx.fillStyle="#ffd94d";ctx.beginPath();ctx.roundRect(-9,-9,18,18,5);ctx.fill();
+      ctx.shadowBlur=0;ctx.fillStyle="#05071a";
+      ctx.font="bold 12px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.fillText("奶",0,1);
+      ctx.restore();
+    }
+    // 慢车（换色奶蛙）
+    for(const t of traffic){
+      const x=laneX(t.lane);
+      // 阴影
+      ctx.fillStyle="rgba(0,0,0,.4)";
+      ctx.beginPath();ctx.ellipse(x,t.y+34,26,7,0,0,7);ctx.fill();
+      const img=tintedFrog(t.tint,128);
+      ctx.save();ctx.translate(x,t.y);
+      ctx.shadowBlur=16;ctx.shadowColor=t.color;
+      ctx.drawImage(img,-34,-34,68,68);
+      ctx.restore();
+      // 名牌
+      ctx.fillStyle="rgba(5,7,26,.7)";
+      ctx.beginPath();ctx.roundRect(x-40,t.y+40,80,17,8);ctx.fill();
+      ctx.fillStyle=t.color;ctx.font="10px sans-serif";ctx.textAlign="center";
+      ctx.fillText(t.name,x,t.y+52);
+    }
+    // 玩家奶蛙
+    const py=player.y;
+    ctx.fillStyle="rgba(0,0,0,.45)";
+    ctx.beginPath();ctx.ellipse(player.x,py+38,30,8,0,0,7);ctx.fill();
+    // 冲刺火焰
+    if(boost>80){
+      ctx.save();ctx.translate(player.x,py+46);
+      for(let i=0;i<3;i++){
+        ctx.fillStyle=["rgba(34,211,238,.85)","rgba(255,217,77,.7)","rgba(255,110,199,.6)"][i];
+        ctx.beginPath();
+        ctx.ellipse(0,14+i*11,16-i*4,22-i*5,0,0,7);
+        ctx.globalAlpha=.75-i*.18;ctx.fill();
+      }
+      ctx.restore();ctx.globalAlpha=1;
+    }
+    ctx.save();ctx.translate(player.x,py);ctx.rotate(player.tilt);
+    if(invuln>0&&Math.floor(invuln*10)%2===0)ctx.globalAlpha=.35;
+    ctx.shadowBlur=22;ctx.shadowColor="#ffd94d";
+    if(frogImg.complete&&frogImg.naturalWidth)ctx.drawImage(frogImg,-37,-37,74,74);
+    ctx.restore();
+    // 粒子
+    for(const p of particles){
+      ctx.globalAlpha=Math.max(0,1-p.t/p.life);
+      ctx.fillStyle=p.color;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  /* ---- HUD ---- */
+  if(state==="run"){
+    // 顶栏
+    ctx.fillStyle="rgba(5,7,26,.72)";ctx.beginPath();ctx.roundRect(12,12,W-24,86,14);ctx.fill();
+    // 距离进度条
+    const prog=Math.min(1,dist/TOTAL_M);
+    ctx.strokeStyle="#2a3a6a";ctx.lineWidth=1;
+    ctx.fillStyle="#8b93c8";ctx.font="11px sans-serif";ctx.textAlign="left";
+    ctx.fillText(`🏁 终点`,16,30);
+    ctx.fillStyle="#0d1430";ctx.beginPath();ctx.roundRect(16,36,W-32,12,6);ctx.fill();
+    const pg=ctx.createLinearGradient(16,0,W-16,0);
+    pg.addColorStop(0,"#22d3ee");pg.addColorStop(1,"#ffd94d");
+    ctx.fillStyle=pg;ctx.beginPath();ctx.roundRect(16,36,(W-32)*prog,12,6);ctx.fill();
+    ctx.fillStyle="#fff";ctx.font="bold 10px sans-serif";
+    ctx.fillText(`${Math.floor(dist)}m / ${TOTAL_M}m`,22,45.5);
+    // 速度
+    ctx.fillStyle="#ffd94d";ctx.font="bold 20px Consolas,monospace";ctx.textAlign="right";
+    ctx.fillText(`${Math.round(speed/4)} km/h`,W-20,78);
+    ctx.fillStyle="#8b93c8";ctx.font="10px sans-serif";
+    ctx.fillText("速度",W-20,90);
+    // 体力
+    ctx.fillStyle="#8b93c8";ctx.font="10px sans-serif";ctx.textAlign="left";
+    ctx.fillText("冲刺体力",16,72);
+    ctx.fillStyle="#0d1430";ctx.beginPath();ctx.roundRect(16,76,110,10,5);ctx.fill();
+    ctx.fillStyle=stamina>.3?"#7ec850":"#ff5a5a";
+    ctx.beginPath();ctx.roundRect(16,76,110*stamina,10,5);ctx.fill();
+    // 超车/奶糖
+    ctx.fillStyle="#22d3ee";ctx.font="bold 12px sans-serif";ctx.textAlign="left";
+    ctx.fillText(`超车 ${overtakes}  🍬 ${candyCount}`,140,86);
+
+    // 宿敌进度（右侧）
+    let ry=120;
+    ctx.textAlign="right";
+    for(const r of rivals){
+      const rp=Math.min(1,(r.dist||0)/TOTAL_M);
+      ctx.fillStyle="rgba(5,7,26,.6)";ctx.beginPath();ctx.roundRect(W-96,ry,84,34,10);ctx.fill();
+      ctx.fillStyle=r.color;ctx.font="10px sans-serif";
+      ctx.fillText(r.name,W-18,ry+13);
+      ctx.fillStyle="#1a2a55";ctx.beginPath();ctx.roundRect(W-90,ry+18,78,7,4);ctx.fill();
+      ctx.fillStyle=r.color;ctx.beginPath();ctx.roundRect(W-90,ry+18,78*rp,7,4);ctx.fill();
+      ry+=42;
+    }
+  }
+  ctx.restore();
+}
+
+/* ---------- 开始 / 重开 ---------- */
+document.getElementById("startBtn").addEventListener("click",start);
+document.getElementById("againBtn").addEventListener("click",start);
+function start(){
+  reset();traffic=[];overtakes=0;candyCount=0;
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("endScreen").classList.add("hidden");
+  state="run";last=performance.now();
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

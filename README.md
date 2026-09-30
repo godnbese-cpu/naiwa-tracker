@@ -1,30 +1,25 @@
-# 🐸 奶蛙观测站（NAIWA Tracker）
+# 🐸 奶蛙诞生庆典观测站（NAIWA Tracker）
 
-全网奶蛙使用频率实时观测站：全球热力图 + 传播飞线动画 + 奶蛙编年史 + 砸箱子 + 送票互动。
+庆祝奶蛙诞生的全网观测站 + 奶蛙赛车大奖赛：全球光络图（传播飞线）+ 诞生编年史 + 砸箱子 + 送票 + 极速杯赛车游戏。
+
+**在线访问**：https://godnbese-cpu.github.io/naiwa-tracker/
+
+## 页面
+
+- `index.html` — 观测站主页：实时计数大屏、全球光络图（多地图源容错）、实时数据流、24h 趋势、场景饼图、全球排行榜、诞生编年史（发光时间轴）、砸箱子、送票
+- `race.html` — 🏎️ 奶蛙极速杯：Canvas 赛车游戏，彩虹奶蛙对手经过程序化换色生成，支持键盘/触屏，成绩存 localStorage
 
 ## 本地预览
 
-直接用浏览器打开 `index.html` 即可（地图与图表依赖 CDN，需联网）。
+直接用浏览器打开 `index.html`（图表与地图依赖 CDN，需联网）。
 
-## 部署到 GitHub Pages（获得简洁域名）
-
-1. 在 GitHub 上新建一个公开仓库，推荐名为 `naiwa-tracker`
-2. 把本文件夹推上去（在本目录执行）：
+## 部署到 GitHub Pages
 
 ```bash
-git remote add origin https://github.com/<你的用户名>/naiwa-tracker.git
-git branch -M main
-git push -u origin main
+git push origin main
 ```
 
-3. 打开仓库 → Settings → Pages → Source 选择 `main` 分支 `/ (root)` → Save
-4. 等待约 1 分钟，即可通过以下地址访问：
-
-```
-https://<你的用户名>.github.io/naiwa-tracker/
-```
-
-想要更短的根域名 `<用户名>.github.io`：把仓库命名为 `<你的用户名>.github.io` 再推送即可。
+仓库已配置 Pages（main 分支 / 根目录），推送后约 1 分钟生效。
 
 ## 数据接入
 
@@ -32,5 +27,6 @@ https://<你的用户名>.github.io/naiwa-tracker/
 
 ## 文件说明
 
-- `index.html` — 观测站全部页面逻辑（纯静态单页）
-- `naiwa.webp` — 奶蛙形象原图
+- `index.html` — 观测站主页
+- `race.html` — 赛车游戏
+- `naiwa.webp` — 奶蛙形象原图（彩虹对手为程序化换色变体）
