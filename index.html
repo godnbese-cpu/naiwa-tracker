@@ -6,8 +6,8 @@
 <title>奶蛙诞生庆典 · 全网观测站</title>
 <link rel="icon" href="naiwa.webp">
 <script src="echarts.min.js"></script>
-<script>window.echarts||document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"><\/script>')</script>
-<!-- 真实传播数据（由 tools/naiwa_pageviews.py 生成；不存在时页面自动退回推演数据） -->
+<!-- 真实传播数据（构建期抓取后落成本地文件，浏览器不请求任何外部 API） -->
+<script src="assets/naiwa-data/naiwa-countries.js" onerror="window.__noCountries=1"></script>
 <script src="assets/naiwa-data/naiwa-reality.js" onerror="window.__noReality=1"></script>
 <style>
   :root{
@@ -331,7 +331,7 @@
   </div>
 
   <div class="card">
-    <h2>🏆 全球国家 / 地区使用频率排行榜 <span class="tag sim">模拟推演</span></h2>
+    <h2>🏆 全球国家 / 地区使用频率排行榜 <span class="tag" id="rankTag" style="color:#7ec850;border-color:rgba(126,200,80,.4)">Wikimedia 真实数据</span></h2>
     <div class="rank" id="rank"></div>
   </div>
 
@@ -495,13 +495,26 @@ function updateRuntime(){
   document.getElementById("runtime").textContent=`${h}:${m}:${ss}`;
 }
 updateRuntime();setInterval(updateRuntime,1000);
-// 3) GitHub 仓库真实数据（公开 API，无需鉴权）
-fetch("https://api.github.com/repos/godnbese-cpu/naiwa-tracker").then(r=>r.json()).then(d=>{
-  if(d&&d.stargazers_count!==undefined){
-    document.getElementById("stars").innerHTML=`⭐ ${d.stargazers_count} · 🍴 ${d.forks_count} · 📦 ${(d.size/1024).toFixed(1)}MB`;
-    document.getElementById("ghSub").textContent=`开源仓库 godnbese-cpu/naiwa-tracker · 实时`;
-  }else{document.getElementById("stars").textContent="暂时无法拉取";}
-}).catch(()=>{document.getElementById("stars").textContent="暂时无法拉取";});
+// 3) 仓库信息：国内访问 api.github.com 常被拦，所以做成「有就拿、没有就本地兜底」
+(function(){
+  const el=document.getElementById("stars"), sub=document.getElementById("ghSub");
+  function fallback(reason){
+    el.textContent="开源仓库";
+    sub.textContent="godnbese-cpu/naiwa-tracker" + (reason ? " · " + reason : "");
+  }
+  /* 4 秒内没结果就先用兜底文案，避免一直停在"加载中" */
+  const guard=setTimeout(()=>fallback("网络受限，已省略实时数据"),4000);
+  fetch("https://api.github.com/repos/godnbese-cpu/naiwa-tracker")
+    .then(r=>r.ok?r.json():Promise.reject(new Error("HTTP "+r.status)))
+    .then(d=>{
+      clearTimeout(guard);
+      if(d&&d.stargazers_count!==undefined){
+        el.innerHTML=`⭐ ${d.stargazers_count} · 🍴 ${d.forks_count} · 📦 ${(d.size/1024).toFixed(1)}MB`;
+        sub.textContent=`开源仓库 godnbese-cpu/naiwa-tracker · 实时`;
+      }else fallback("数据暂不可用");
+    })
+    .catch(()=>{ clearTimeout(guard); fallback("网络受限，已省略实时数据"); });
+})();
 // 4) 北京时间
 function updateClock(){
   document.getElementById("clock").textContent=new Date().toLocaleTimeString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false});
@@ -515,9 +528,10 @@ updateClock();setInterval(updateClock,1000);
    ③ 东亚文化圈跟进（日韩）
    ④ 其余国家长尾分布
    数值为全球单日使用次数的推演估计 */
-const countries=["中国","美国","日本","韩国","印度","泰国","越南","马来西亚","新加坡","印度尼西亚","菲律宾","英国","法国","德国","意大利","西班牙","俄罗斯","加拿大","巴西","澳大利亚","埃及","南非","墨西哥","土耳其","沙特阿拉伯","新西兰","荷兰","瑞典","波兰","阿根廷"];
+const countries=["中国","中国台湾","中国香港","美国","日本","韩国","印度","泰国","越南","马来西亚","新加坡","印度尼西亚","菲律宾","英国","法国","德国","意大利","西班牙","俄罗斯","加拿大","巴西","澳大利亚","埃及","南非","墨西哥","土耳其","沙特阿拉伯","新西兰","荷兰","瑞典","波兰","阿根廷"];
 const coords={
-  "中国":[116.4,39.9],"美国":[-98,39.5],"日本":[139.7,35.7],"韩国":[127,37.5],"印度":[77.2,28.6],
+  "中国":[116.4,39.9],"中国台湾":[121.0,23.7],"中国香港":[114.17,22.32],
+  "美国":[-98,39.5],"日本":[139.7,35.7],"韩国":[127,37.5],"印度":[77.2,28.6],
   "泰国":[100.5,13.8],"越南":[105.8,21.0],"马来西亚":[101.7,3.1],"新加坡":[103.8,1.35],"印度尼西亚":[106.8,-6.2],
   "菲律宾":[121.0,14.6],"英国":[-0.1,51.5],"法国":[2.35,48.85],"德国":[13.4,52.5],"意大利":[12.5,41.9],
   "西班牙":[-3.7,40.4],"俄罗斯":[37.6,55.75],"加拿大":[-106,56],"巴西":[-47.9,-15.8],"澳大利亚":[149.1,-35.3],
@@ -536,11 +550,16 @@ countries.forEach((c,i)=>{
   baseData[c]=Math.round(GLOBAL_TOTAL*pct[i]/100*(0.94+Math.random()*0.12));
 });
 
-/* ================= 真实数据接入（tools/naiwa_pageviews.py 产出） =================
-   如果 assets/naiwa-data/naiwa-reality.js 存在，地图热力值就改用
-   维基百科「各语言版本真实访问量」当权重，而不是手写的百分比。
-   没有这个文件时自动退回推演数据，页面不会坏。 */
+/* ================= 真实数据接入（构建期抓取，浏览器零外部请求） =================
+   两个数据文件都是 tools/ 里的脚本提前生成好的本地文件：
+     assets/naiwa-data/naiwa-countries.js  真实分国家访问量（地图热力值来源）
+     assets/naiwa-data/naiwa-reality.js    真实月度趋势（趋势图来源）
+   好处：浏览器不请求任何外部 API，网络受限的环境也能正常显示。
+   文件不存在时自动退回推演数据，页面不会坏。
+   ⚠️ 应用到地图的逻辑放在下面的地图模块里，因为需要用到 EN2ZH 映射表。 */
 const REAL = (typeof NAIWA_REALITY!=="undefined") ? NAIWA_REALITY : null;
+const COUNTRIES_DATA = (typeof NAIWA_COUNTRIES!=="undefined") ? NAIWA_COUNTRIES : null;
+
 if(REAL){
   /* 1) 用真实的「分国家访问量」覆盖推演占比
      —— 直接采用真实比例，不再人为压缩，因为这就是实测结果 */
@@ -564,6 +583,8 @@ if(REAL){
     REAL.__missCountries=miss;
     REAL.__realApplied=true;
   }
+  /* 1b) 真正的分国家真实数据在**后面**统一覆盖（见 applyRealCountries），
+     那里有 EN2ZH 映射表可用，而且必须在地图模块的重算之后执行。 */
   /* 2) 渲染真实数据面板 + 用真实月度趋势替换模拟趋势曲线 */
   window.__NAIWA_renderReality = function(){
     const card=document.getElementById("realityCard");
@@ -652,14 +673,13 @@ setInterval(pushFeed,900);
 /* ================= 全球光络图（真实地图热力 + 频次气泡 + 传播弧线） ================= */
 const mapChart=echarts.init(document.getElementById("map"),null,{renderer:"canvas"});
 const GEO_SOURCES=[
-  {url:"world.json",label:"本地文件（同源加载，零外部依赖）"},
-  {url:"https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/json/world.json",label:"jsdelivr CDN 备用"},
-  {url:"https://unpkg.com/echarts@4.9.0/map/json/world.json",label:"unpkg CDN 备用"}
+  {url:"world.json",label:"本地文件（同源加载，零外部依赖）"}
 ];
 
 /* 中文名 → GeoJSON 里的英文名（用于地图着色与定位） */
 const NAME_MAP={
-  "中国":"China","美国":"United States","日本":"Japan","韩国":"Korea","印度":"India",
+  "中国":"China","中国台湾":"Taiwan","中国香港":"Hong Kong",
+  "美国":"United States","日本":"Japan","韩国":"Korea","印度":"India",
   "泰国":"Thailand","越南":"Vietnam","马来西亚":"Malaysia","新加坡":"Singapore",
   "印度尼西亚":"Indonesia","菲律宾":"Philippines","英国":"United Kingdom","法国":"France",
   "德国":"Germany","意大利":"Italy","西班牙":"Spain","俄罗斯":"Russia","加拿大":"Canada",
@@ -668,6 +688,23 @@ const NAME_MAP={
   "荷兰":"Netherlands","瑞典":"Sweden","波兰":"Poland","阿根廷":"Argentina"
 };
 const EN2ZH={};Object.keys(NAME_MAP).forEach(k=>EN2ZH[NAME_MAP[k]]=k);
+
+/* ISO 国家码 → 中文名。
+   ⚠️ 上面那张表是「英文名 → 中文名」（美国 → United States），
+   但 Wikimedia 分国家数据用的是 **ISO 码**（US / JP / GB…），
+   直接拿 ISO 码去查 EN2ZH 永远查不到——这是真实数据一直没生效的原因。 */
+const ISO2ZH={
+  US:"美国", JP:"日本", GB:"英国", DE:"德国", IN:"印度", FR:"法国", IT:"意大利",
+  CA:"加拿大", BR:"巴西", PL:"波兰", ES:"西班牙", AU:"澳大利亚", RU:"俄罗斯",
+  KR:"韩国", TW:"中国台湾", HK:"中国香港", CN:"中国",
+  TH:"泰国", VN:"越南", MY:"马来西亚", SG:"新加坡", ID:"印度尼西亚", PH:"菲律宾",
+  MX:"墨西哥", TR:"土耳其", SA:"沙特阿拉伯", EG:"埃及", ZA:"南非", NZ:"新西兰",
+  NL:"荷兰", SE:"瑞典", AR:"阿根廷"
+};
+Object.keys(ISO2ZH).forEach(iso=>{ if(!EN2ZH[iso]) EN2ZH[iso]=ISO2ZH[iso]; });
+
+/* 真实分国家数据的应用见下方地图模块开头的 applyRealCountries()：
+   那里既能拿到 EN2ZH，又能保证在地图/推演数据重算之后覆盖，顺序不会错。 */
 
 /* 各频次档位的配色（低 → 高） */
 const HEAT_STOPS=["#0d1b3e","#12406b","#1b7fa8","#22d3ee","#7ec850","#ffd94d","#ff8a3c","#ff4d4f"];
@@ -689,12 +726,25 @@ function ringCentroid(ring){
   return [cx/(6*a),cy/(6*a)];
 }
 function featureCentroid(f){
-  const polys=f.geometry.type==="Polygon"?[f.geometry.coordinates]:f.geometry.coordinates;
+  /* 防御：world.json 里有若干要素的 geometry 是 null 或坐标为空，
+     不做判断会抛 "Cannot read properties of undefined (reading 'length')"，
+     而且这个异常发生在 async 里，只会变成静默的 unhandledrejection，
+     表现就是"地图一直停在加载中"。 */
+  if(!f || !f.geometry || !f.geometry.coordinates) return null;
+  const g=f.geometry;
+  const polys = g.type==="Polygon" ? [g.coordinates]
+              : (g.type==="MultiPolygon" ? g.coordinates : null);
+  if(!polys || !polys.length) return null;
   let best=null,bestArea=0;
   polys.forEach(poly=>{
+    if(!poly || !poly.length) return;
     const outer=poly[0];
+    if(!outer || outer.length<3) return;
     let a=0;
-    for(let i=0,n=outer.length-1;i<n;i++)a+=outer[i][0]*outer[i+1][1]-outer[i+1][0]*outer[i][1];
+    for(let i=0,n=outer.length-1;i<n;i++){
+      if(!outer[i]||!outer[i+1]) continue;
+      a+=outer[i][0]*outer[i+1][1]-outer[i+1][0]*outer[i][1];
+    }
     a=Math.abs(a/2);
     if(a>bestArea){bestArea=a;best=outer;}
   });
@@ -703,6 +753,54 @@ function featureCentroid(f){
 
 /* 坐标：优先用 GeoJSON 算出来的，算不到才用手写表兜底 */
 const pos={};
+
+/**
+ * 用「真实分国家访问量」覆盖推演数值。
+ *
+ * ⚠️ 时序很关键：这个函数必须在**地图 async 流程内部**被调用。
+ * 曾经在脚本顶层直接调用，结果是：同步先跑一遍（数据是对的），
+ * 随后 async 的地图代码 fetch 完成、重算 baseData，又把真实值覆盖回推演值。
+ * 表现就是"地图有真实数据，但排行榜还是推演数字"。
+ */
+function applyRealCountries(){
+  try{
+    window.__NAIWA_APPLY_DEBUG = {
+      hasData: !!COUNTRIES_DATA,
+      countriesKeys: COUNTRIES_DATA && COUNTRIES_DATA.countries ? Object.keys(COUNTRIES_DATA.countries).length : -1,
+      en2zhKeys: Object.keys(EN2ZH || {}).length,
+      usMapped: !!(COUNTRIES_DATA && COUNTRIES_DATA.countries && EN2ZH[Object.keys(COUNTRIES_DATA.countries)[0]])
+    };
+    if(!COUNTRIES_DATA || !COUNTRIES_DATA.countries) return false;
+    const byZh={};
+    Object.keys(COUNTRIES_DATA.countries).forEach(iso=>{
+      const zh=EN2ZH[iso]||EN2ZH[String(iso||"").toUpperCase()];
+      if(zh) byZh[zh]=COUNTRIES_DATA.countries[iso];
+    });
+    const hit=countries.filter(c=>byZh[c]>0);
+    if(hit.length<3) return false;
+    const sum=hit.reduce((a,c)=>a+byZh[c],0)||1;
+    const miss=[];
+    countries.forEach((c,i)=>{
+      if(byZh[c]>0){
+        pct[i]=byZh[c]/sum*100;
+        baseData[c]=byZh[c];                 /* 真实访问量直接当热力值 */
+      }else{
+        pct[i]=0.02;
+        baseData[c]=Math.max(1,Math.round(GLOBAL_TOTAL*0.0002));
+        miss.push(c);
+      }
+    });
+    window.__NAIWA_REAL_COUNTRIES={
+      data:COUNTRIES_DATA, masked:hit.length, missed:miss,
+      months:COUNTRIES_DATA.months, totalViews:COUNTRIES_DATA.totalViews,
+      appliedAt:new Date().toISOString()
+    };
+    return true;
+  }catch(e){
+    console.warn("真实分国家数据应用失败，已退回推演数据", e);
+    return false;
+  }
+}
 
 (async function(){
   let geo=null,usedLabel="";
@@ -715,12 +813,13 @@ const pos={};
   const srcEl=document.getElementById("mapSrc");
   if(!geo){srcEl.innerHTML="❌ 所有地图源均加载失败，请刷新重试";return;}
 
-  /* 1) 算出所有国家的中心点 */
+  /* 1) 算出所有国家的中心点（featureCentroid 内部已做空几何防御） */
   let autoCount=0;
-  geo.features.forEach(f=>{
-    const en=f.properties&&f.properties.name;
+  (geo.features||[]).forEach(f=>{
+    const en=f&&f.properties&&f.properties.name;
     if(!en)return;
-    const c=featureCentroid(f);
+    let c=null;
+    try{ c=featureCentroid(f); }catch(e){ c=null; }
     if(c&&isFinite(c[0])&&isFinite(c[1])){pos[en]=c;autoCount++;}
   });
   /* 2) 补齐手写表里有的（GeoJSON 里叫法不同时兜底） */
@@ -730,11 +829,18 @@ const pos={};
   });
 
   srcEl.innerHTML=`<b>✓ 地图已加载</b>：${usedLabel} · 由 GeoJSON 自动定位 <b>${autoCount}</b> 个国家中心<br>`
-    +`<span style="color:#ff4d4f">红/橙=高频</span> · <span style="color:#ffd94d">黄=中频</span> · `
-    +`<span style="color:#22d3ee">青=低频</span> · <span style="color:#0d1b3e">深蓝=极低</span>`
+    +`<span style="color:#ff4d4f">红/橙=高频</span> · <span style="color:#ffd94d">黄=中频</span> · `    +`<span style="color:#22d3ee">青=低频</span> · <span style="color:#0d1b3e">深蓝=极低</span>`
     +` · 弧线粗细/颜色 = 传播强度（黄=东亚圈，青=欧美华人圈，粉=全球扩散）`;
 
   echarts.registerMap("world",geo);
+
+  /* 真实分国家数据在这里覆盖推演值（必须在地图流程内，见函数注释） */
+  const realApplied = applyRealCountries();
+  /* 没拿到真实数据时，把标签退回「模拟推演」，避免误导 */
+  if(!realApplied){
+    const rt=document.getElementById("rankTag");
+    if(rt){ rt.textContent="模拟推演"; rt.className="tag sim"; rt.style.color=""; rt.style.borderColor=""; }
+  }
 
   /* 3) 地图热力数据（英文名 → 频次）。maxVal 随数据变化，气泡半径才能跟着动 */
   let maxVal=Math.max(...Object.values(baseData));

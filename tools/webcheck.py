@@ -232,8 +232,12 @@ def main() -> int:
             ws.call("Page.addScriptToEvaluateOnNewDocument", {"source":
                 "window.__errs=[];window.__consoleErrs=[];"
                 "window.addEventListener('error',function(e){"
-                "try{window.__errs.push((e.message||'')+' @ '+(e.filename||'')+':'+(e.lineno||0)+"
-                "' | target='+((e.target&&(e.target.src||e.target.href))||''));}catch(x){}},true);"
+                "try{window.__errs.push('ERR: '+(e.message||'')+' @'+(e.filename||'')+':'+(e.lineno||0)+"
+                "' target='+((e.target&&(e.target.src||e.target.href))||''));}catch(x){}},true);"
+                # 异步 Promise 里的异常只有这个事件抓得到（地图/图表代码大多是 async）
+                "window.addEventListener('unhandledrejection',function(e){"
+                "try{var r=e.reason;window.__errs.push('REJECT: '+((r&&(r.stack||r.message))||String(r)));}"
+                "catch(x){}},true);"
                 "var _ce=console.error;console.error=function(){"
                 "try{window.__consoleErrs.push(Array.prototype.slice.call(arguments).join(' '));}catch(x){}"
                 "return _ce.apply(console,arguments);};"})
